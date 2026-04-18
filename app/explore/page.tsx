@@ -1,32 +1,23 @@
 import { MRTMap } from '@/components/MRTMap';
 import { TabBar } from '@/components/TabBar';
 
-export default function HomePage() {
+export default function ExplorePage() {
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto pb-20">
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
-          <h1 className="text-4xl font-bold mb-2">🚇 MRTQuest</h1>
-          <p className="text-slate-600">Discover heritage sites along MRT lines</p>
-        </div>
-
-        {/* Hero Banner */}
-        <div className="px-6 mb-6">
-          <div className="bg-gradient-to-br from-purple-400 via-pink-300 to-blue-400 rounded-3xl p-6 text-white shadow-md">
-            <div className="text-5xl mb-4">🏛️</div>
-            <h2 className="text-2xl font-bold mb-2">Explore Heritage Sites</h2>
-            <p className="text-sm">Tap on a station to discover amazing places along the MRT</p>
-          </div>
+          <h1 className="text-3xl mb-2">Where am I exploring today? 🗺️</h1>
+          <p className="text-slate-600">Tap any station to discover heritage sites</p>
         </div>
 
         {/* MRT Map */}
-        <div className="px-4 mb-8">
+        <div className="px-4">
           <MRTMap />
         </div>
 
         {/* Fun Stats */}
-        <div className="px-6 mb-8">
+        <div className="px-6 mt-8">
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-5 shadow-sm border-2 border-white">
             <div className="flex items-center justify-around">
               <div className="text-center">
