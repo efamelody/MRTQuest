@@ -28,13 +28,13 @@ create table stations (
 -- =========================
 create table heritage_sites (
   id uuid primary key default uuid_generate_v4(),
-  station_id uuid references stations(id) on delete cascade,
   name text not null,
   description text,
   latitude double precision,
   longitude double precision,
   image_url text,
-  created_at timestamp default now()
+  created_at timestamp default now(),
+  google_map text
 );
 
 -- =========================

@@ -1,8 +1,6 @@
-import { TabBar } from '@/components/TabBar';
-
 export default function PassportPage() {
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto pb-20">
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
@@ -77,8 +75,6 @@ export default function PassportPage() {
           </div>
         </div>
       </div>
-
-      <TabBar />
     </div>
   );
 }

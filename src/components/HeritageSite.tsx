@@ -8,6 +8,7 @@ interface HeritageSiteProps {
   description: string;
   image?: string;
   rating?: number;
+  googleMap?: string;
   onCheckIn: () => void;
   onGetDirections: () => void;
   onCardClick: () => void;
@@ -28,13 +29,17 @@ export function HeritageSite({
       className="bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden shadow-sm border-2 border-white hover:shadow-md transition cursor-pointer"
     >
       {image && (
-        <div className="h-40 bg-gradient-to-br from-purple-200 to-blue-200 flex items-center justify-center text-4xl">
-          {image}
+        <div className="h-40 bg-gradient-to-br from-purple-200 to-blue-200 overflow-hidden">
+          <img
+            src={image}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
         </div>
       )}
 
       <div className="p-4">
-        <h3 className="font-bold text-lg mb-2">{name}</h3>
+        <h3 className="text-fuchsia-300 font-bold text-lg mb-2">{name}</h3>
         <p className="text-sm text-slate-600 mb-3 line-clamp-2">{description}</p>
 
         {rating && (

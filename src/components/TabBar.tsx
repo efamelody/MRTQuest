@@ -1,20 +1,23 @@
 'use client';
 
 import { usePathname, useRouter } from 'next/navigation';
-import { MapPin, Map, Stamp } from 'lucide-react';
+import { TrainFront, Album, Stamp } from 'lucide-react';
 
 export function TabBar() {
   const pathname = usePathname();
   const router = useRouter();
 
   const tabs = [
-    { href: '/explore', label: 'Explore', icon: Map },
-    { href: '/station', label: 'Station', icon: MapPin },
-    { href: '/passport', label: 'Passport', icon: Stamp },
+    { href: '/explore', label: 'Explore', icon: TrainFront },
+    { href: '/badge', label: 'Badge', icon: Stamp },
+    { href: '/passport', label: 'Passport', icon: Album },
   ];
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white/70 backdrop-blur-sm border-t-2 border-white shadow-2xl">
+    <div
+      className="fixed inset-x-0 bottom-0 z-50 max-w-lg mx-auto bg-white/70 backdrop-blur-sm border-t-2 border-white shadow-2xl"
+      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+    >
       <div className="flex items-center justify-around h-20">
         {tabs.map((tab) => {
           const Icon = tab.icon;
