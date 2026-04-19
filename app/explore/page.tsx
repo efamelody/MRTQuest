@@ -14,6 +14,7 @@ type LineId = (typeof lineTabs)[number]['id'];
 type Station = {
   id: string;
   name: string;
+  active: boolean;
 };
 
 const lineMeta: Record<LineId, { label: string; colorClass: string; accentClass: string }> = {
@@ -44,7 +45,7 @@ export default function ExplorePage() {
 
       const { data, error: fetchError } = await supabase
         .from('stations')
-        .select('id,name,sequence_order')
+        .select('id,name,sequence_order,active')
         .eq('line', activeLineMeta.label)
         .order('sequence_order', { ascending: true });
 

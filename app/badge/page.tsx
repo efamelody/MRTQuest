@@ -16,6 +16,7 @@ type BadgeRecord = {
   criteria_value?: number | null;
   criter_target?: string | null;
   station_id?: string | null;
+  stations?: Array<{ active: boolean }> | null;
   user_badges?: Array<{ earned_at: string; user_id?: string }>;
 };
 
@@ -46,7 +47,7 @@ export default function BadgePage() {
 
       let query = supabase
         .from('badges')
-        .select('id,name,description,icon,criteria_type,criteria_value,criter_target,station_id,user_badges(earned_at,user_id)');
+        .select('id,name,description,icon,criteria_type,criteria_value,criter_target,station_id,stations(active),user_badges(earned_at,user_id)');
 
       if (hasUser) {
         query = query.eq('user_badges.user_id', currentUserId);
@@ -58,7 +59,8 @@ export default function BadgePage() {
         setError(fetchError.message);
         setBadges([]);
       } else {
-        setBadges(data ?? []);
+        const activeBadges = (data ?? []).filter((badge) => badge.stations?.[0]?.active);
+        setBadges(activeBadges);
       }
 
       setIsLoading(false);
@@ -132,7 +134,7 @@ export default function BadgePage() {
 
             <div className="mt-5 h-3 rounded-full bg-slate-200 overflow-hidden">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600"
+                className="h-full rounded-full bg-linear-to-r from-emerald-400 to-emerald-600"
                 style={{ width: badgeStats.total ? `${Math.round((badgeStats.earned / badgeStats.total) * 100)}%` : '0%' }}
               />
             </div>

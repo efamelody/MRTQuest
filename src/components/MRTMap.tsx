@@ -7,6 +7,7 @@ type LineId = 'kajang' | 'putrajaya';
 interface Station {
   id: string;
   name: string;
+  active: boolean;
 }
 
 interface MRTMapProps {
@@ -42,27 +43,32 @@ export function MRTMap({ selectedLine, stations, lineLabel, colorClass, accentCl
 
           {stations.length > 0 ? (
             <div className="relative flex flex-col items-start gap-8 px-6">
-              {stations.map((station) => (
-                <div key={station.id} className="flex items-center gap-4 w-full max-w-xl mx-auto pl-10">
-                  {/*Line dot with accent */}
-                  <div className="relative flex items-center justify-center w-10">
-                    {/*round dot on the line */}
-                    <span
-                      className={`absolute top-1/2 -translate-x-10 -translate-y-1/2 h-5 w-5 rounded-full ${accentClass} opacity-90 transition-transform hover:scale-110`}
-                    />
+              {stations.map((station) => {
+                const isDisabled = !station.active;
+
+                return (
+                  <div key={station.id} className="flex items-center gap-4 w-full max-w-xl mx-auto pl-10">
+                    {/*Line dot with accent */}
+                    <div className="relative flex items-center justify-center w-10">
+                      {/*round dot on the line */}
+                      <span
+                        className={`absolute top-1/2 -translate-x-10 -translate-y-1/2 h-5 w-5 rounded-full transition-transform ${isDisabled ? 'bg-slate-300' : `${accentClass} opacity-90`} ${isDisabled ? '' : 'hover:scale-110'}`}
+                      />
+                    </div>
+                    {/* // Station button */}
+                    <button
+                      type="button"
+                      onClick={() => !isDisabled && handleStationClick(station.id)}
+                      disabled={isDisabled}
+                      className={`flex-1 rounded-xl -translate-x-10 bg-white/90 px-4 py-3 shadow-sm border border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 text-left overflow-hidden transition ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-100'}`}
+                    >
+                      <span className={`text-sm font-medium truncate ${isDisabled ? 'text-slate-400' : 'text-slate-700'}`}>
+                        {station.name}
+                      </span>
+                    </button>
                   </div>
-                  {/* // Station button */}
-                  <button
-                    type="button"
-                    onClick={() => handleStationClick(station.id)}
-                    className="flex-1 rounded-xl -translate-x-10 bg-white/90 px-4 py-3 shadow-sm border border-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 text-left overflow-hidden"
-                  >
-                    <span className="text-sm font-medium text-slate-700 truncate">
-                      {station.name}
-                    </span>
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="pt-12 text-center text-sm text-slate-500">
