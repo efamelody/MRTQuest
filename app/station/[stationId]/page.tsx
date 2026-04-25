@@ -50,12 +50,12 @@ export default async function StationPage({ params }: PageProps) {
       <div className="bg-white/70 backdrop-blur-sm border-b-2 border-white px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
         <Link
           href="/explore"
-          className="flex items-center gap-2 text-slate-700 hover:text-[var(--color-primary)] transition-colors"
+          className="flex items-center gap-2 text-slate-700 hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Map</span>
         </Link>
-        <p className="text-lg text-[#c329c8] flex items-center gap-2">
+        <p className="text-lg text-heading flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           {stationName}
         </p>
@@ -66,8 +66,8 @@ export default async function StationPage({ params }: PageProps) {
         <div className="mb-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <MapPin className="w-10 h-7 text-[#a9006b]" />
-              <h1 className="text-3xl font-serif text-slate-900">
+              <MapPin className="w-10 h-7 text-heading" />
+              <h1 className="text-3xl font-serif text-heading">
                 {stationName}
               </h1>
             </div>

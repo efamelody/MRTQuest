@@ -114,7 +114,7 @@ export default function BadgePage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-slate-500">Badge Cabinet</p>
-              <h1 className="text-3xl text-[var(--color-heading)] font-bold tracking-tight">Achievements Hub</h1>
+              <h1 className="text-3xl text-heading font-bold tracking-tight">Achievements Hub</h1>
             </div>
           </div>
           <p className="mt-3 text-slate-600">See what you&apos;ve earned and what&apos;s still waiting in your collector cabinet.</p>

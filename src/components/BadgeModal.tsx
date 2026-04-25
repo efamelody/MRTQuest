@@ -43,7 +43,7 @@ export function BadgeModal({ badge, onClose, isOpen = true }: BadgeModalProps) {
       </p>
 
       <div className="flex gap-4 rounded-3xl bg-slate-50 p-4 mb-4">
-        <div className="flex h-20 w-20 flex-shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm">
+        <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-white shadow-sm">
           {badge.icon && badge.icon.startsWith('http') ? (
             <img src={badge.icon} alt={badge.name} className="h-16 w-16 rounded-2xl object-contain" />
           ) : (

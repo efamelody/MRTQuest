@@ -4,7 +4,9 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MRTMap } from '@/components/MRTMap';
 import { SuggestionForm } from '@/components/SuggestionForm';
-import { Lightbulb } from 'lucide-react';
+import { Lightbulb, PlusCircle } from 'lucide-react';
+
+// import Button from '@/components/Button';
 
 const lineTabs = [
   { id: 'kajang', label: 'Kajang Line' },
@@ -40,6 +42,7 @@ export default function ExplorePage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSuggestionFormOpen, setIsSuggestionFormOpen] = useState(false);
+  const [isActiveOnly, setIsActiveOnly] = useState(true);
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -66,6 +69,9 @@ export default function ExplorePage() {
   }, [activeLine]);
 
   const activeLineMeta = lineMeta[activeLine];
+  const filteredStations = isActiveOnly
+    ? stations.filter((s) => s.active)
+    : stations;
   //TODO: CALL API FOR STATIONS TIME
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
@@ -94,10 +100,12 @@ export default function ExplorePage() {
         <div className="px-4">
           <MRTMap
             selectedLine={activeLine}
-            stations={stations}
+            stations={filteredStations}
             lineLabel={activeLineMeta.label}
             colorClass={activeLineMeta.colorClass}
             accentClass={activeLineMeta.accentClass}
+            isActiveOnly={isActiveOnly}
+            onToggle={setIsActiveOnly}
           />
           {isLoading && (
             <p className="mt-4 text-sm text-slate-500">Loading stations…</p>
@@ -108,13 +116,13 @@ export default function ExplorePage() {
         </div>
 
         {/* Suggestion Button */}
-        <div className="px-6 mt-8 pb-4">
+        <div className="justify-end px-6 mt-6 pb-4">
           <button
             onClick={() => setIsSuggestionFormOpen(true)}
-            className="w-full bg-linear-to-r from-purple-400 to-pink-400 text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-2 hover:shadow-lg transition active:scale-95"
+            className="ml-auto flex-1 mt-6 border-2 border-dashed border-slate-300 bg-white/40 p-4 rounded-2xl flex items-center justify-center gap-2 text-slate-500 hover:border-primary hover:text-primary transition-all active:scale-95"
           >
-            <Lightbulb className="w-5 h-5" />
-            Suggest an Attraction
+            <PlusCircle className="w-5 h-5" />
+            <span className="font-semibold">Suggest a hidden gem</span>
           </button>
         </div>
       </div>

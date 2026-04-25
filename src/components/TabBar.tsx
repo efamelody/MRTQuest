@@ -28,12 +28,12 @@ export function TabBar() {
               onClick={() => router.push(tab.href)}
               className={`flex flex-col items-center justify-center h-20 transition-all ${
                 isActive
-                  ? 'text-[var(--color-primary)] scale-110'
+                  ? 'text-primary scale-110'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >
               <Icon className="w-5 h-5 mb-1" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-xs font-medium font-gamified">{tab.label}</span>
             </button>
           );
         })}

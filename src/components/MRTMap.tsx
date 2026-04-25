@@ -16,9 +16,11 @@ interface MRTMapProps {
   lineLabel: string;
   colorClass: string;
   accentClass: string;
+  isActiveOnly: boolean;
+  onToggle: (isActiveOnly: boolean) => void;
 }
 
-export function MRTMap({ selectedLine, stations, lineLabel, colorClass, accentClass }: MRTMapProps) {
+export function MRTMap({ selectedLine, stations, lineLabel, colorClass, accentClass, isActiveOnly, onToggle }: MRTMapProps) {
   const router = useRouter();
 
   const handleStationClick = (stationId: string) => {
@@ -36,6 +38,22 @@ export function MRTMap({ selectedLine, stations, lineLabel, colorClass, accentCl
           <div className={`rounded-full px-3 py-1 text-sm font-semibold text-white ${accentClass}`}>
             {lineLabel}
           </div>
+        </div>
+        <div className="flex items-center justify-between w-full p-2">
+          <span className="text-sm font-medium text-slate-600">Show verified stops</span>
+          
+          <button
+            onClick={() => onToggle(!isActiveOnly)}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors ${
+              isActiveOnly ? 'bg-pink-300' : 'bg-slate-300'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                isActiveOnly ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </div>
 
         <div className="relative py-10">

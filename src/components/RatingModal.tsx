@@ -65,7 +65,7 @@ export function RatingModal({ site, onRate, onClose, isOpen = true }: RatingModa
         value={comment}
         onChange={(e) => setComment(e.target.value)}
         placeholder="Add a comment (optional)"
-        className="w-full border-2 border-slate-200 rounded-xl p-3 resize-none focus:outline-none focus:border-[var(--color-primary)]"
+        className="w-full border-2 border-slate-200 rounded-xl p-3 resize-none focus:outline-none focus:border-primary"
         rows={3}
       />
     </Modal>

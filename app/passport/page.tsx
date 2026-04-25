@@ -1,6 +1,6 @@
 export default function PassportPage() {
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
+    <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto pb-20">
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
@@ -14,12 +14,12 @@ export default function PassportPage() {
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="text-center">
                 <div className="text-3xl mb-2">🏛️</div>
-                <div className="text-2xl font-bold text-[var(--color-primary)]">5</div>
+                <div className="text-2xl font-bold text-primary">5</div>
                 <div className="text-xs text-slate-600">Visited</div>
               </div>
               <div className="text-center">
                 <div className="text-3xl mb-2">⭐</div>
-                <div className="text-2xl font-bold text-[var(--color-accent)]">12</div>
+                <div className="text-2xl font-bold text-accent">12</div>
                 <div className="text-xs text-slate-600">Reviews</div>
               </div>
               <div className="text-center">
@@ -59,7 +59,7 @@ export default function PassportPage() {
               <div className="text-sm text-slate-600">Visited 2 days ago</div>
               <div className="flex gap-1 mt-2">
                 {[...Array(5)].map((_, i) => (
-                  <span key={i} className="text-[var(--color-accent)]">⭐</span>
+                  <span key={i} className="text-accent">⭐</span>
                 ))}
               </div>
             </div>
@@ -68,7 +68,7 @@ export default function PassportPage() {
               <div className="text-sm text-slate-600">Visited 5 days ago</div>
               <div className="flex gap-1 mt-2">
                 {[...Array(4)].map((_, i) => (
-                  <span key={i} className="text-[var(--color-accent)]">⭐</span>
+                  <span key={i} className="text-accent">⭐</span>
                 ))}
               </div>
             </div>

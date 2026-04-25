@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Fredoka, Outfit, Lilita_One, Quicksand } from "next/font/google";
 import { Header } from '@/components/Header';
 import "./globals.css";
 import { TabBar } from "@/components/TabBar";
@@ -12,6 +12,27 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const lilitaOne = Lilita_One({
+  weight: "400",
+  subsets: ["latin"],
+  variable: "--font-lilita-one",
+});
+
+const quicksand = Quicksand({
+  subsets: ["latin"],
+  variable: "--font-quicksand",
+})
+
+const fredoka = Fredoka({
+  subsets: ["latin"],
+  variable: "--font-fredoka", // Cute/Gamified font
+});
+
+const outfit = Outfit({
+  subsets: ["latin"],
+  variable: "--font-outfit", // Clean/Modern UI font
 });
 
 export const metadata: Metadata = {
@@ -27,7 +48,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased`}
+      className={`${geistSans.variable} ${quicksand.variable} ${geistMono.variable} ${lilitaOne.variable} ${fredoka.variable} ${outfit.variable} min-h-screen antialiased`}
     >
       <body className="min-h-screen flex flex-col">
         <Header />

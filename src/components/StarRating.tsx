@@ -26,7 +26,7 @@ export default function StarRating({
           aria-label={`Rate ${star} stars`}
         >
           <span
-            className={`${star <= displayRating ? 'fill-[var(--color-accent)]' : 'fill-slate-200'}`}
+            className={`${star <= displayRating ? 'fill-accent' : 'fill-slate-200'}`}
             style={{
               color: star <= displayRating ? 'var(--color-accent)' : '#e2e8f0'
             }}
