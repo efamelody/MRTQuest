@@ -1,6 +1,6 @@
 'use client';
 
-import { HeritageSite } from '@/components/HeritageSite';
+import { AttractionCard } from '@/components/AttractionCard';
 
 interface SiteData {
   id: string;
@@ -19,7 +19,7 @@ export function StationSitesList({ sites }: StationSitesListProps) {
   return (
     <div className="space-y-4">
       {sites.map((site) => (
-        <HeritageSite
+        <AttractionCard
           key={site.id}
           {...site}
           onCheckIn={() => {

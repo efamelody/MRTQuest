@@ -12,7 +12,7 @@ export function Header() {
 
           <div>
             <p className="text-base font-semibold text-slate-900">MRTQuest</p>
-            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Explore heritage lines</p>
+            <p className="text-xs uppercase tracking-[0.3em] text-slate-500">Explore urban attraction lines</p>
           </div>
         </Link>
       </div>

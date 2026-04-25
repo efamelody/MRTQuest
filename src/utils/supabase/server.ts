@@ -19,3 +19,29 @@ export const createClient = () => {
     },
   );
 };
+
+export async function insertAttractionSuggestion(
+  name: string,
+  description: string,
+  stationId: string
+) {
+  const supabase = createClient();
+  
+  const { data, error } = await supabase
+    .from("attractions")
+    .insert([
+      {
+        name,
+        description,
+        station_id: stationId,
+        is_verified: false,
+      },
+    ])
+    .select();
+
+  if (error) {
+    throw new Error(`Failed to insert suggestion: ${error.message}`);
+  }
+
+  return data;
+}

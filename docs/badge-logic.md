@@ -64,10 +64,10 @@ CREATE TABLE public.stations (
 );
 ```
 
-### `heritage_sites`
+### `attractions`
 
 ```sql
-CREATE TABLE public.heritage_sites (
+CREATE TABLE public.attractions (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
   station_id uuid,
   name text NOT NULL,
@@ -78,8 +78,8 @@ CREATE TABLE public.heritage_sites (
   created_at timestamp without time zone DEFAULT now(),
   google_map text,
   category text,
-  CONSTRAINT heritage_sites_pkey PRIMARY KEY (id),
-  CONSTRAINT heritage_sites_station_id_fkey FOREIGN KEY (station_id) REFERENCES public.stations(id)
+  CONSTRAINT attractions_pkey PRIMARY KEY (id),
+  CONSTRAINT attractions_station_id_fkey FOREIGN KEY (station_id) REFERENCES public.stations(id)
 );
 ```
 
@@ -93,7 +93,7 @@ CREATE TABLE public.visits (
   visited_at timestamp without time zone DEFAULT now(),
   CONSTRAINT visits_pkey PRIMARY KEY (id),
   CONSTRAINT visits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT visits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.heritage_sites(id)
+  CONSTRAINT visits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.attractions(id)
 );
 ```
 
@@ -106,7 +106,7 @@ CREATE TABLE public.quizzes (
   question text NOT NULL,
   correct_answer text NOT NULL,
   CONSTRAINT quizzes_pkey PRIMARY KEY (id),
-  CONSTRAINT quizzes_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.heritage_sites(id)
+  CONSTRAINT quizzes_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.attractions(id)
 );
 ```
 
@@ -132,12 +132,12 @@ This schema supports flexible badge requirements using `criteria_type`, `criteri
 ### Common badge criteria
 
 - `visit_count`
-  - award after a user visits a number of heritage sites.
-  - `criteria_value`: number of unique site visits.
+  - award after a user visits a number of attractions.
+  - `criteria_value`: number of unique attraction visits.
   - `criter_target`: optional category or line.
 
 - `line_master`
-  - award when a user has visited every station or every heritage site on a line.
+  - award when a user has visited every station or every attraction on a line.
   - `criteria_value`: total number of required stations or sites.
   - `criter_target`: line name (e.g. `Kajang Line` or `Putrajaya Line`).
 
@@ -162,9 +162,9 @@ This schema supports flexible badge requirements using `criteria_type`, `criteri
 INSERT INTO public.badges (name, description, icon, criteria_type, criteria_value, criter_target)
 VALUES
   ('Kajang Line Master', 'Visit every station on the Kajang Line.', '🥇', 'line_master', 10, 'Kajang Line'),
-  ('Putrajaya Explorer', 'Visit 5 heritage sites on the Putrajaya Line.', '🥈', 'visit_count', 5, 'Putrajaya Line'),
-  ('Heritage Scholar', 'Answer all quizzes correctly for one site.', '🎓', 'quiz_master', 1, 'site'),
-  ('Frequent Traveler', 'Visit 20 heritage sites overall.', '✈️', 'visit_count', 20, NULL);
+  ('Putrajaya Explorer', 'Visit 5 attractions on the Putrajaya Line.', '🥈', 'visit_count', 5, 'Putrajaya Line'),
+  ('Attraction Scholar', 'Answer all quizzes correctly for one attraction.', '🎓', 'quiz_master', 1, 'site'),
+  ('Frequent Traveler', 'Visit 20 attractions overall.', '✈️', 'visit_count', 20, NULL);
 ```
 
 ## Badge Fetch Logic
@@ -216,7 +216,7 @@ WITH line_stations AS (
 ), visited_sites AS (
   SELECT DISTINCT hs.station_id
   FROM public.visits v
-  JOIN public.heritage_sites hs ON hs.id = v.site_id
+  JOIN public.attractions hs ON hs.id = v.site_id
   WHERE v.user_id = :current_user_id
     AND hs.station_id IN (SELECT id FROM line_stations)
 )

@@ -5,7 +5,7 @@ export default function PassportPage() {
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
           <h1 className="text-3xl mb-2">Your Passport 📔</h1>
-          <p className="text-slate-600">Track your heritage exploration journey</p>
+          <p className="text-slate-600">Track your urban adventure journey</p>
         </div>
 
         {/* Stats Section */}

@@ -7,7 +7,7 @@ interface PageProps {
   params: Promise<{ stationId: string }>;
 }
 
-interface HeritageSiteRow {
+interface AttractionRow {
   id: string;
   name: string;
   description: string | null;
@@ -22,7 +22,7 @@ export default async function StationPage({ params }: PageProps) {
   const [{ data: stationData }, { data: siteData }] = await Promise.all([
     supabase.from('stations').select('name').eq('id', stationId).single(),
     supabase
-      .from('heritage_sites')
+      .from('attractions')
       .select('id,name,description,image_url,google_map')
       .eq('station_id', stationId)
       .order('name', { ascending: true }),
@@ -36,7 +36,7 @@ export default async function StationPage({ params }: PageProps) {
           .join(' ')
       : 'Unknown Station');
 
-  const sites = (siteData ?? []).map((site: HeritageSiteRow) => ({
+  const attractions = (siteData ?? []).map((site: AttractionRow) => ({
     id: site.id,
     name: site.name,
     description: site.description ?? 'No description available.',
@@ -61,7 +61,7 @@ export default async function StationPage({ params }: PageProps) {
         </p>
       </div>
 
-      {/* Heritage Sites */}
+      {/* Attractions */}
       <div className="flex-1 px-4 py-6">
         <div className="mb-6">
           <div className="flex flex-col gap-2">
@@ -74,12 +74,12 @@ export default async function StationPage({ params }: PageProps) {
           </div>
         </div>
 
-        <StationSitesList sites={sites} />
+        <StationSitesList sites={attractions} />
 
-        {sites.length === 0 && (
+        {attractions.length === 0 && (
           <div className="text-center py-12">
             <Map className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-            <p className="text-slate-600">No heritage sites found nearby</p>
+            <p className="text-slate-600">No attractions found nearby</p>
             <p className="text-sm text-slate-500 mt-2">Check back soon for updates!</p>
           </div>
         )}

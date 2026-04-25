@@ -24,17 +24,19 @@ create table stations (
 );
 
 -- =========================
--- HERITAGE SITES
+-- ATTRACTIONS
 -- =========================
-create table heritage_sites (
+create table attractions (
   id uuid primary key default uuid_generate_v4(),
+  station_id uuid references stations(id),
   name text not null,
   description text,
   latitude double precision,
   longitude double precision,
   image_url text,
   created_at timestamp default now(),
-  google_map text
+  google_map text,
+  is_verified boolean default false
 );
 
 -- =========================
@@ -43,7 +45,7 @@ create table heritage_sites (
 create table reviews (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references profiles(id) on delete cascade,
-  site_id uuid references heritage_sites(id) on delete cascade,
+  site_id uuid references attractions(id) on delete cascade,
   rating int check (rating >= 1 and rating <= 5),
   comment text,
   created_at timestamp default now()
@@ -55,7 +57,7 @@ create table reviews (
 create table visits (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references profiles(id) on delete cascade,
-  site_id uuid references heritage_sites(id) on delete cascade,
+  site_id uuid references attractions(id) on delete cascade,
   visited_at timestamp default now()
 );
 
@@ -64,7 +66,7 @@ create table visits (
 -- =========================
 create table quizzes (
   id uuid primary key default uuid_generate_v4(),
-  site_id uuid references heritage_sites(id) on delete cascade,
+  site_id uuid references attractions(id) on delete cascade,
   question text not null,
   correct_answer text not null
 );

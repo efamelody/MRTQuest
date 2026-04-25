@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/utils/supabase/client';
 import { MRTMap } from '@/components/MRTMap';
+import { SuggestionForm } from '@/components/SuggestionForm';
+import { Lightbulb } from 'lucide-react';
 
 const lineTabs = [
   { id: 'kajang', label: 'Kajang Line' },
@@ -37,6 +39,7 @@ export default function ExplorePage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSuggestionFormOpen, setIsSuggestionFormOpen] = useState(false);
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -103,7 +106,28 @@ export default function ExplorePage() {
             <p className="mt-4 text-sm text-red-600">Unable to load stations: {error}</p>
           )}
         </div>
+
+        {/* Suggestion Button */}
+        <div className="px-6 mt-8 pb-4">
+          <button
+            onClick={() => setIsSuggestionFormOpen(true)}
+            className="w-full bg-linear-to-r from-purple-400 to-pink-400 text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-2 hover:shadow-lg transition active:scale-95"
+          >
+            <Lightbulb className="w-5 h-5" />
+            Suggest an Attraction
+          </button>
+        </div>
       </div>
+
+      {/* Suggestion Form Modal */}
+      <SuggestionForm
+        isOpen={isSuggestionFormOpen}
+        onClose={() => setIsSuggestionFormOpen(false)}
+        onSuccess={() => {
+          // Refresh stations list after successful suggestion
+          setActiveLine(activeLine);
+        }}
+      />
     </div>
   );
 }

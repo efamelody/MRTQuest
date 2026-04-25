@@ -49,7 +49,7 @@ export function BadgeModal({ badge, onClose }: BadgeModalProps) {
             )}
           </div>
           <div>
-            <p className="text-sm text-slate-600">{badge.description ?? 'Unlock this badge by exploring more heritage sites.'}</p>
+            <p className="text-sm text-slate-600">{badge.description ?? 'Unlock this badge by exploring more attractions.'}</p>
           </div>
         </div>
 

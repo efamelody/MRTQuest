@@ -16,7 +16,7 @@ erDiagram
     timestamp created_at
   }
 
-  heritage_sites {
+  attractions {
     uuid id PK
     uuid station_id FK
     text name
@@ -73,10 +73,10 @@ erDiagram
   }
 
   %% Relationships
-  stations ||--o{ heritage_sites : has
-  heritage_sites ||--o{ reviews : receives
-  heritage_sites ||--o{ visits : visited_at
-  heritage_sites ||--o{ quizzes : has
+  stations ||--o{ attractions : has
+  attractions ||--o{ reviews : receives
+  attractions ||--o{ visits : visited_at
+  attractions ||--o{ quizzes : has
 
   profiles ||--o{ reviews : writes
   profiles ||--o{ visits : makes

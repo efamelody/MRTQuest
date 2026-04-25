@@ -5,15 +5,15 @@ export default function HomePage() {
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
           <h1 className="text-4xl font-bold mb-2">🚇 MRTQuest</h1>
-          <p className="text-slate-600">Discover heritage sites along MRT lines</p>
+          <p className="text-slate-600">Discover hidden attractions along MRT lines</p>
         </div>
 
         {/* Hero Banner */}
         <div className="px-6 mb-6">
           <div className="bg-linear-to-br from-purple-400 via-pink-300 to-blue-400 rounded-3xl p-6 text-white shadow-md">
-            <div className="text-5xl mb-4">🏛️</div>
-            <h2 className="text-2xl font-bold mb-2">Explore Heritage Sites</h2>
-            <p className="text-sm">Tap on a station to discover amazing places along the MRT</p>
+              <div className="text-5xl mb-4">📍</div>
+              <h2 className="text-2xl font-bold mb-2">Explore Hidden MRT Attractions</h2>
+              <p className="text-sm">Tap on a station to uncover cafes, viewpoints, and local culture along your commute.</p>
           </div>
         </div>
 

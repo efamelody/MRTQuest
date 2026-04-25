@@ -1,6 +1,6 @@
-# MRTQuest (MRT Heritage Explorer)
+# MRTQuest (MRT Urban Adventure)
 
-This project is a Next.js app that is currently being built as a serverless MVP for exploring MRT stations and nearby heritage sites.
+This project is a Next.js app that is currently being built as a serverless MVP for exploring MRT stations and nearby attractions.
 
 ## Current Status
 
@@ -59,9 +59,9 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ## Next steps
 1. Finalize Tailwind CSS configuration.
-2. Create Supabase tables: `stations`, `heritage_sites`, `users`, etc.
+2. Create Supabase tables: `stations`, `attractions`, `users`, etc.
 3. Build Supabase client helpers (`src/lib/supabase-client.ts` / `src/lib/supabase-server.ts`).
-4. Add API routes for stations and heritage sites.
+4. Add API routes for stations and attractions.
 5. Render the MRT map and station discovery UI.
 
 ## Notes

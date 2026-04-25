@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "MRTQuest",
-  description: "Discover heritage sites along Kuala Lumpur MRT lines",
+  description: "Discover hidden attractions along Kuala Lumpur MRT lines",
 };
 
 export default function RootLayout({
