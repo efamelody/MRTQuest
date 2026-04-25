@@ -2,18 +2,19 @@
 
 import { Navigation, MapPin, Star } from 'lucide-react';
 
-interface HeritageSiteProps {
+interface AttractionProps {
   id: string;
   name: string;
   description: string;
   image?: string;
   rating?: number;
+  googleMap?: string;
   onCheckIn: () => void;
   onGetDirections: () => void;
   onCardClick: () => void;
 }
 
-export function HeritageSite({
+export function AttractionCard({
   name,
   description,
   image,
@@ -21,20 +22,24 @@ export function HeritageSite({
   onCheckIn,
   onGetDirections,
   onCardClick,
-}: HeritageSiteProps) {
+}: AttractionProps) {
   return (
     <div
       onClick={onCardClick}
       className="bg-white/70 backdrop-blur-sm rounded-3xl overflow-hidden shadow-sm border-2 border-white hover:shadow-md transition cursor-pointer"
     >
       {image && (
-        <div className="h-40 bg-gradient-to-br from-purple-200 to-blue-200 flex items-center justify-center text-4xl">
-          {image}
+        <div className="h-40 bg-linear-to-br from-purple-200 to-blue-200 overflow-hidden">
+          <img
+            src={image}
+            alt={name}
+            className="h-full w-full object-cover"
+          />
         </div>
       )}
 
       <div className="p-4">
-        <h3 className="font-bold text-lg mb-2">{name}</h3>
+        <h3 className="text-fuchsia-300 font-bold text-lg mb-2">{name}</h3>
         <p className="text-sm text-slate-600 mb-3 line-clamp-2">{description}</p>
 
         {rating && (
@@ -44,7 +49,7 @@ export function HeritageSite({
                 key={i}
                 className={`w-4 h-4 ${
                   i < rating
-                    ? 'fill-[#FFD520] text-[#FFD520]'
+                    ? 'fill-accent text-accent'
                     : 'text-slate-300'
                 }`}
               />
@@ -59,7 +64,7 @@ export function HeritageSite({
               e.stopPropagation();
               onCheckIn();
             }}
-            className="flex-1 bg-[#00A959] text-white py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition"
+            className="flex-1 bg-primary text-white py-2 rounded-xl text-sm font-medium hover:brightness-90 transition"
           >
             Check In ✓
           </button>
