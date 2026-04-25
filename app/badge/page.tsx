@@ -24,9 +24,7 @@ const badgeCategories = [
   { id: 'all', label: 'All' },
   { id: 'station-visit', label: 'Station Stamps' },
   { id: 'milestones', label: 'Milestones' },
-  { id: 'line-master', label: 'Line Master' },
   { id: 'quiz-master', label: 'Quiz Master' },
-  { id: 'category-expert', label: 'Category Expert' },
 ] as const;
 
 type BadgeCategory = (typeof badgeCategories)[number]['id'];
@@ -36,9 +34,20 @@ export default function BadgePage() {
   const [activeCategory, setActiveCategory] = useState<BadgeCategory>('all');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState('');
 
-  const currentUserId = '';
   const hasUser = Boolean(currentUserId);
+
+  useEffect(() => {
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (data?.user?.id) {
+        setCurrentUserId(data.user.id);
+      }
+    };
+
+    loadUser();
+  }, []);
 
   useEffect(() => {
     const fetchBadges = async () => {
@@ -59,8 +68,7 @@ export default function BadgePage() {
         setError(fetchError.message);
         setBadges([]);
       } else {
-        const activeBadges = (data ?? []).filter((badge) => badge.stations?.[0]?.active);
-        setBadges(activeBadges);
+        setBadges(data ?? []);
       }
 
       setIsLoading(false);
@@ -93,14 +101,8 @@ export default function BadgePage() {
       if (activeCategory === 'milestones') {
         return type === 'visit_count' || description.includes('visit') || description.includes('sites');
       }
-      if (activeCategory === 'line-master') {
-        return type === 'line_master' || description.includes('line');
-      }
       if (activeCategory === 'quiz-master') {
         return type === 'quiz_master' || description.includes('quiz') || description.includes('correct');
-      }
-      if (activeCategory === 'category-expert') {
-        return type === 'category_expert' || description.includes('category');
       }
 
       return true;
@@ -120,7 +122,7 @@ export default function BadgePage() {
           <p className="mt-3 text-slate-600">See what you&apos;ve earned and what&apos;s still waiting in your collector cabinet.</p>
         </div>
 
-        <section className="px-6 mb-6">
+        <section className="px-6">
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-5 shadow-sm border-2 border-white">
             <div className="flex items-center justify-between gap-4">
               <div>
@@ -142,57 +144,62 @@ export default function BadgePage() {
           </div>
         </section>
 
-        <section className="px-6 mb-6">
-          <div className="inline-flex rounded-3xl bg-white/80 p-1 shadow-sm border border-white">
-            {badgeCategories.map((category) => {
-              const isActive = category.id === activeCategory;
-              return (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() => setActiveCategory(category.id)}
-                  className={`px-4 py-3 text-sm font-semibold transition-all rounded-3xl ${isActive ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'}`}
-                >
-                  {category.label}
-                </button>
-              );
-            })}
+        {/* 2. COMPACT CATEGORY CHIPS (Horizontal Scroll) */}
+        <div className="flex gap-2 px-6 overflow-x-auto no-scrollbar py-3">
+        {badgeCategories.map((category) => {
+          const isActive = category.id === activeCategory;
+          return (
+            <button
+              key={category.id}
+              onClick={() => setActiveCategory(category.id)}
+              className={`whitespace-nowrap px-4 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                isActive ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200'
+              }`}
+            >
+              {category.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3. THE STICKER GRID */}
+      <section className="px-6">
+        {isLoading && <p className="text-sm text-slate-500">Loading badges…</p>}
+        {error && <p className="text-sm text-red-600">{error}</p>}
+
+        {!isLoading && !error && (
+          <div className="grid grid-cols-3 gap-3">
+            {filteredBadges.map((badge) => (
+              <div key={badge.id} className="aspect-square">
+                <BadgeCard badge={badge} compact />
+              </div>
+            ))}
+
+            {Array.from({ length: Math.max(0, 9 - filteredBadges.length) }).map((_, i) => (
+              <div
+                key={i}
+                className="aspect-square rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center"
+              >
+                <Sparkles className="w-4 h-4 text-slate-200" />
+              </div>
+            ))}
           </div>
-        </section>
-
-        <section className="px-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="text-xl font-bold">Your Trophies</h2>
-              <p className="text-sm text-slate-500">Tap a badge to learn how to unlock it.</p>
-            </div>
-          </div>
-
-          {isLoading && <p className="text-sm text-slate-500">Loading badges…</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
-
-          {!isLoading && !error && (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredBadges.map((badge) => (
-                <BadgeCard key={badge.id} badge={badge} />
-              ))}
-            </div>
-          )}
-
-          {!isLoading && !error && !badges.length && (
-            <div className="rounded-3xl bg-white/80 p-6 text-center border border-slate-200">
-              <p className="text-slate-600">No badges are available yet. Add badges to your Supabase schema or check your connection.</p>
-            </div>
-          )}
-        </section>
-
-        {!hasUser && (
-          <section className="px-6 mb-10">
-            <div className="rounded-3xl bg-white/80 p-5 shadow-sm border border-slate-200">
-              <p className="text-sm text-slate-600">Connect a user session to see earned badges and progress tracking.</p>
-            </div>
-          </section>
         )}
+
+        {!isLoading && !error && !badges.length && (
+          <div className="rounded-3xl bg-white/80 p-6 text-center border border-slate-200 mt-4">
+            <p className="text-slate-600">No badges are available yet. Add badges to your Supabase schema or check your connection.</p>
+          </div>
+        )}
+      </section>
+
+      {!hasUser && (
+        <section className="px-6 mb-10 mt-6">
+          <div className="rounded-3xl bg-white/80 p-5 shadow-sm border border-slate-200">
+            <p className="text-sm text-slate-600">Connect a user session to see earned badges and progress tracking.</p>
+          </div>
+        </section>
+      )}
       </div>
     </div>
   );

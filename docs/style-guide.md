@@ -35,6 +35,7 @@ All values here map directly to CSS custom properties declared inside `@theme` i
 |---|---|---|
 | `--color-primary` | `#00A959` | CTA buttons, active nav, check-in button, progress bars |
 | `--color-accent` | `#FFD520` | Star ratings, highlight badges, accent chips |
+| `--color-brand-heading` | `#064E3B` | Brand heading accent and dark green text |
 
 **Alternatives to consider for `--color-primary`**
 
@@ -50,7 +51,7 @@ All values here map directly to CSS custom properties declared inside `@theme` i
 |---|---|---|
 | Current | `#FFD520` | Bold yellow, strong contrast |
 | Warm | `#FFC107` | Material Design amber |
-| Muted | `#F5C518` | IMDb gold — less harsh |
+| Muted | `#F5C518` | Slightly softer, warmer yellow |
 
 ---
 
@@ -59,16 +60,16 @@ All values here map directly to CSS custom properties declared inside `@theme` i
 | Token | Value | Usage |
 |---|---|---|
 | `--color-foreground` | `#171717` | Default body text |
-| `--color-heading` | `#e879f9` (fuchsia-400) | Section headings, station names |
-| `--color-muted` | `#64748b` (slate-500) | Secondary labels, metadata |
+| `--color-heading` | `#2D3250` | Section headings, primary labels |
+| `--color-brand-heading` | `#064E3B` | Brand heading accent and dark green text |
 
 **Alternatives to consider for `--color-heading`**
 
 | Option | Tailwind equivalent | Notes |
 |---|---|---|
-| Current | `text-fuchsia-300` | Playful, high-energy |
-| Professional | `text-violet-400` | Softer purple |
-| Neutral | `text-slate-700` | Remove color entirely |
+| Current | `text-slate-900` | Strong neutral heading color |
+| Brand | `text-emerald-700` | Dark green accent for branded headers |
+| Neutral | `text-slate-700` | Softer, more muted headings |
 
 ---
 
@@ -78,6 +79,7 @@ All values here map directly to CSS custom properties declared inside `@theme` i
 |---|---|---|
 | `--color-background` | `#ffffff` | Page base (overridden by gradient on most pages) |
 | `--color-surface` | `rgba(255,255,255,0.7)` | Cards, header, modals (glassmorphism) |
+| `--color-modal-backdrop` | `rgba(15, 23, 42, 0.7)` | Modal and overlay backdrops |
 
 **Page gradient** (not a token — applied directly as Tailwind utilities):
 ```
@@ -129,8 +131,11 @@ Gradient alternatives:
 
 | Token | Value | Usage |
 |---|---|---|
-| `--font-sans` | `var(--font-geist-sans)` | All UI text |
-| `--font-mono` | `var(--font-geist-mono)` | Code snippets only |
+| `--font-sans` | `var(--font-quicksand)` | Default body and UI text |
+| `--font-mono` | `var(--font-geist-mono)` | Code snippets and monospace UI elements |
+| `--font-lilita-one` | `var(--font-lilita-one)` | Decorative/gamified headings and hero text |
+| `--font-fredoka` | `var(--font-fredoka)` | Optional accent font for playful UI elements |
+| `--font-outfit` | `var(--font-outfit)` | Optional modern UI text |
 
 ### Type Scale (Tailwind defaults — no custom tokens needed)
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Trophy } from 'lucide-react';
+import { Trophy, Lock } from 'lucide-react';
 import { BadgeModal } from '@/components/BadgeModal';
 
 type Badge = {
@@ -12,9 +12,10 @@ type Badge = {
 
 type BadgeCardProps = {
   badge: Badge;
+  compact?: boolean;
 };
 
-export function BadgeCard({ badge }: BadgeCardProps) {
+export function BadgeCard({ badge, compact = false }: BadgeCardProps) {
   const [open, setOpen] = useState(false);
   const isEarned = Boolean(badge.user_badges?.length);
 
@@ -23,21 +24,54 @@ export function BadgeCard({ badge }: BadgeCardProps) {
       <article
         tabIndex={0}
         onClick={() => setOpen(true)}
-        className={`group cursor-pointer rounded-3xl border bg-white p-5 shadow-sm transition duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 ${isEarned ? 'border-emerald-200 hover:-translate-y-1 hover:shadow-lg' : 'border-slate-200 opacity-80 grayscale hover:opacity-100'} `}
+        className={`
+          group relative cursor-pointer aspect-square rounded-[2rem] border transition-all duration-300 active:scale-95
+          flex flex-col items-center justify-center text-center p-2
+          ${isEarned 
+            ? 'bg-white shadow-[0_8px_20px_-6px_rgba(0,169,89,0.2)] border-emerald-100' 
+            : 'bg-white/40 border-dashed border-slate-200 grayscale opacity-60'
+          }
+        `}
       >
-        <div className={`mx-auto flex h-24 w-24 items-center justify-center rounded-3xl text-5xl ${isEarned ? 'bg-emerald-100' : 'bg-slate-200'}`}>
+        {/* Lock Overlay for unearned badges */}
+        {!isEarned && (
+          <div className="absolute top-2 right-2 bg-slate-200 p-1 rounded-full">
+            <Lock className="w-3 h-3 text-slate-400" />
+          </div>
+        )}
+
+        {/* Icon Container */}
+        <div
+          className={`
+            mb-1 flex items-center justify-center rounded-2xl transition-transform group-hover:scale-110
+            ${compact ? 'h-14 w-14' : 'h-18 w-18'}
+            ${isEarned ? 'bg-emerald-50' : 'bg-transparent'}
+          `}
+        >
           {badge.icon && badge.icon.startsWith('http') ? (
-            <img src={badge.icon} alt={badge.name} className="h-20 w-20 rounded-2xl object-contain" />
+            <img
+              src={badge.icon}
+              alt={badge.name}
+              className="h-full w-full object-contain p-1"
+            />
           ) : (
-            <span>{badge.icon ?? <Trophy className="w-12 h-12" />}</span>
+            <span className="text-3xl">
+              {badge.icon ?? <Trophy className="w-8 h-8 text-slate-300" />}
+            </span>
           )}
         </div>
 
-        <h3 className="mt-5 text-center text-base font-semibold tracking-tight text-slate-900">{badge.name}</h3>
-
-        <p className={`mt-3 text-center text-[11px] uppercase tracking-[0.25em] ${isEarned ? 'text-emerald-600' : 'text-slate-400'}`}>
-          {isEarned ? 'Earned' : 'Locked'}
-        </p>
+        {/* Text Section */}
+        <div className="px-1">
+          <h3 className="font-bold leading-tight text-slate-800 text-[11px] line-clamp-2 font-sans">
+            {badge.name}
+          </h3>
+          {isEarned && (
+            <div className="mt-0.5 flex justify-center">
+              <div className="h-1 w-4 rounded-full bg-emerald-400" />
+            </div>
+          )}
+        </div>
       </article>
 
       {open && <BadgeModal badge={badge} onClose={() => setOpen(false)} />}

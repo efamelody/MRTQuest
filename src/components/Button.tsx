@@ -18,7 +18,7 @@ export default function Button({
   const baseStyles = 'px-6 py-3 rounded-2xl font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed'
   
   const variantStyles = {
-    primary: 'bg-[var(--color-primary)] text-white hover:bg-[#008043] active:bg-[#006633]',
+    primary: 'bg-[var(--color-primary)] text-white hover:brightness-90 active:brightness-75',
     secondary: 'bg-white text-[var(--color-primary)] border-2 border-[var(--color-primary)] hover:bg-slate-50 active:bg-slate-100'
   }
   

@@ -50,7 +50,7 @@ export default function Card({
   return (
     <div
       onClick={handleCardClick}
-      className="bg-(--color-card-bg) backdrop-blur-sm rounded-3xl overflow-hidden shadow-sm border-2 border-white hover:shadow-md transition cursor-pointer"
+      className="bg-[var(--color-card-bg)] backdrop-blur-sm rounded-3xl overflow-hidden shadow-sm border-2 border-white hover:shadow-md transition cursor-pointer"
     >
       {image && (
         <div className="h-40 bg-linear-to-br from-purple-200 to-blue-200 overflow-hidden">
@@ -86,7 +86,7 @@ export default function Card({
             {showCheckInButton && onCheckIn && (
               <button
                 onClick={handleCheckIn}
-                className="flex-1 bg-primary text-white py-2 rounded-xl text-sm font-medium hover:bg-[#008043] active:bg-[#006633] transition"
+                className="flex-1 bg-primary text-white py-2 rounded-xl text-sm font-medium hover:brightness-90 active:brightness-75 transition"
               >
                 Check In ✓
               </button>

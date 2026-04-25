@@ -49,7 +49,7 @@ export function AttractionCard({
                 key={i}
                 className={`w-4 h-4 ${
                   i < rating
-                    ? 'fill-[#FFD520] text-[#FFD520]'
+                    ? 'fill-accent text-accent'
                     : 'text-slate-300'
                 }`}
               />
@@ -64,7 +64,7 @@ export function AttractionCard({
               e.stopPropagation();
               onCheckIn();
             }}
-            className="flex-1 bg-[#00A959] text-white py-2 rounded-xl text-sm font-medium hover:bg-green-700 transition"
+            className="flex-1 bg-primary text-white py-2 rounded-xl text-sm font-medium hover:brightness-90 transition"
           >
             Check In ✓
           </button>
