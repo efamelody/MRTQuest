@@ -50,7 +50,7 @@ export default async function StationPage({ params }: PageProps) {
       <div className="bg-white/70 backdrop-blur-sm border-b-2 border-white px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
         <Link
           href="/explore"
-          className="flex items-center gap-2 text-slate-700 hover:text-[#00A959] transition-colors"
+          className="flex items-center gap-2 text-slate-700 hover:text-[var(--color-primary)] transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Map</span>

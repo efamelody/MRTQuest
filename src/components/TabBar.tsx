@@ -15,8 +15,7 @@ export function TabBar() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 max-w-lg mx-auto bg-white/70 backdrop-blur-sm border-t-2 border-white shadow-2xl"
-      style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      className="fixed inset-x-0 bottom-0 z-50 max-w-lg mx-auto bg-white/70 backdrop-blur-sm border-t-2 border-white shadow-2xl safe-area-pb"
     >
       <div className="flex items-center justify-around h-20">
         {tabs.map((tab) => {
@@ -29,7 +28,7 @@ export function TabBar() {
               onClick={() => router.push(tab.href)}
               className={`flex flex-col items-center justify-center h-20 transition-all ${
                 isActive
-                  ? 'text-[#00A959] scale-110'
+                  ? 'text-[var(--color-primary)] scale-110'
                   : 'text-slate-600 hover:text-slate-800'
               }`}
             >

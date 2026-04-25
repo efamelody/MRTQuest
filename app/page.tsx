@@ -23,13 +23,13 @@ export default function HomePage() {
             <div className="flex items-center justify-around">
               <div className="text-center">
                 <div className="text-3xl mb-1">🏛️</div>
-                <div className="text-2xl font-bold text-[#00A959]">24</div>
+                <div className="text-2xl font-bold text-[var(--color-primary)]">24</div>
                 <div className="text-xs text-slate-600">Sites</div>
               </div>
               <div className="h-12 w-px bg-slate-200" />
               <div className="text-center">
                 <div className="text-3xl mb-1">🚇</div>
-                <div className="text-2xl font-bold text-[#FFD520]">16</div>
+                <div className="text-2xl font-bold text-[var(--color-accent)]">16</div>
                 <div className="text-xs text-slate-600">Stations</div>
               </div>
               <div className="h-12 w-px bg-slate-200" />

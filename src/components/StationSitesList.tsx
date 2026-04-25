@@ -1,6 +1,6 @@
 'use client';
 
-import { AttractionCard } from '@/components/AttractionCard';
+import Card from '@/components/Card';
 
 interface SiteData {
   id: string;
@@ -19,7 +19,7 @@ export function StationSitesList({ sites }: StationSitesListProps) {
   return (
     <div className="space-y-4">
       {sites.map((site) => (
-        <AttractionCard
+        <Card
           key={site.id}
           {...site}
           onCheckIn={() => {
