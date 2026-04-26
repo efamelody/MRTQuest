@@ -10,6 +10,7 @@
     "tailwind:init": "tailwindcss init -p"
   },
   "dependencies": {
+    "@better-auth/infra": "^0.2.5",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.0",
     "better-auth": "^1.6.9",
