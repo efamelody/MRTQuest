@@ -111,6 +111,7 @@ model Attraction {
   imageUrl    String?       @map("image_url")
   googleMap   String?       @map("google_map")
   category    String?
+  isVerified  Boolean       @default(false) @map("is_verified")
   createdAt   DateTime      @default(now()) @map("created_at")
   station     Station?      @relation(fields: [stationId], references: [id])
   reviews     Review[]

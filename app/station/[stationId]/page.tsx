@@ -25,6 +25,7 @@ export default async function StationPage({ params }: PageProps) {
       .from('attractions')
       .select('id,name,description,image_url,google_map')
       .eq('station_id', stationId)
+      .eq('is_verified', true)
       .order('name', { ascending: true }),
   ]);
 
