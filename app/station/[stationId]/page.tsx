@@ -13,6 +13,9 @@ interface AttractionRow {
   description: string | null;
   image_url: string | null;
   google_map: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  check_in_radius: number | null;
 }
 
 export default async function StationPage({ params }: PageProps) {
@@ -23,7 +26,7 @@ export default async function StationPage({ params }: PageProps) {
     supabase.from('stations').select('name').eq('id', stationId).single(),
     supabase
       .from('attractions')
-      .select('id,name,description,image_url,google_map')
+      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius')
       .eq('station_id', stationId)
       .eq('is_verified', true)
       .order('name', { ascending: true }),
@@ -43,6 +46,9 @@ export default async function StationPage({ params }: PageProps) {
     description: site.description ?? 'No description available.',
     image: site.image_url ?? undefined,
     googleMap: site.google_map ?? undefined,
+    latitude: site.latitude ?? undefined,
+    longitude: site.longitude ?? undefined,
+    checkInRadius: site.check_in_radius ?? 300,
   }));
 
   return (
@@ -50,7 +56,7 @@ export default async function StationPage({ params }: PageProps) {
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b-2 border-white px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
         <Link
-          href="/explore"
+          href="/"
           className="flex items-center gap-2 text-slate-700 hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />

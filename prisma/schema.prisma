@@ -2,14 +2,12 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
-  schemas  = ["public", "auth"]
 }
 
 // ============================================================
@@ -29,7 +27,6 @@ model User {
   sessions      Session[]
 
   @@map("ba_user")
-  @@schema("public")
 }
 
 model Account {
@@ -50,7 +47,6 @@ model Account {
 
   @@index([userId])
   @@map("ba_account")
-  @@schema("public")
 }
 
 model Session {
@@ -66,7 +62,6 @@ model Session {
 
   @@index([userId])
   @@map("ba_session")
-  @@schema("public")
 }
 
 model Verification {
@@ -78,7 +73,6 @@ model Verification {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("ba_verification")
-  @@schema("public")
 }
 
 // ============================================================
@@ -98,29 +92,30 @@ model Station {
   badges        Badge[]
 
   @@map("stations")
-  @@schema("public")
 }
 
 model Attraction {
-  id          String        @id @default(uuid())
-  stationId   String?       @map("station_id")
-  name        String
-  description String?
-  latitude    Float?
-  longitude   Float?
-  imageUrl    String?       @map("image_url")
-  googleMap   String?       @map("google_map")
-  category    String?
-  isVerified  Boolean       @default(false) @map("is_verified")
-  createdAt   DateTime      @default(now()) @map("created_at")
-  station     Station?      @relation(fields: [stationId], references: [id])
-  reviews     Review[]
-  visits      Visit[]
-  quizzes     Quiz[]
+  id                  String        @id @default(uuid())
+  stationId           String?       @map("station_id")
+  name                String
+  description         String?
+  latitude            Float?
+  longitude           Float?
+  imageUrl            String?       @map("image_url")
+  googleMap           String?       @map("google_map")
+  category            String?
+  isVerified          Boolean       @default(false) @map("is_verified")
+  verificationType    String        @default("quiz") @map("verification_type")
+  checkInRadius       Int           @default(300) @map("check_in_radius")
+  correctQuizAnswer   String?       @map("correct_quiz_answer")
+  createdAt           DateTime      @default(now()) @map("created_at")
+  station             Station?      @relation(fields: [stationId], references: [id])
+  reviews             Review[]
+  visits              Visit[]
+  quizzes             Quiz[]
 
   @@index([stationId])
   @@map("attractions")
-  @@schema("public")
 }
 
 model Profile {
@@ -134,7 +129,6 @@ model Profile {
   quizzes   UserQuizAttempt[]
 
   @@map("profiles")
-  @@schema("public")
 }
 
 model Badge {
@@ -151,7 +145,6 @@ model Badge {
 
   @@index([stationId])
   @@map("badges")
-  @@schema("public")
 }
 
 model UserBadge {
@@ -165,7 +158,6 @@ model UserBadge {
   @@index([userId])
   @@index([badgeId])
   @@map("user_badges")
-  @@schema("public")
 }
 
 model Review {
@@ -181,21 +173,21 @@ model Review {
   @@index([userId])
   @@index([siteId])
   @@map("reviews")
-  @@schema("public")
 }
 
 model Visit {
-  id         String    @id @default(uuid())
-  userId     String    @map("user_id")
-  siteId     String    @map("site_id")
-  visitedAt  DateTime  @default(now()) @map("visited_at")
-  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  attraction Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  siteId            String    @map("site_id")
+  visitedAt         DateTime  @default(now()) @map("visited_at")
+  verificationType  String    @map("verification_type")
+  verifiedAt        DateTime? @map("verified_at")
+  user              Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attraction        Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([siteId])
   @@map("visits")
-  @@schema("public")
 }
 
 model Quiz {
@@ -208,7 +200,6 @@ model Quiz {
 
   @@index([siteId])
   @@map("quizzes")
-  @@schema("public")
 }
 
 model UserQuizAttempt {
@@ -223,5 +214,4 @@ model UserQuizAttempt {
   @@index([userId])
   @@index([quizId])
   @@map("user_quiz_attempts")
-  @@schema("public")
 }
