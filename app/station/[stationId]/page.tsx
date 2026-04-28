@@ -16,20 +16,32 @@ interface AttractionRow {
   latitude: number | null;
   longitude: number | null;
   check_in_radius: number | null;
+  has_quiz_challenge: boolean | null;
+}
+
+interface QuizRow {
+  id: string;
+  site_id: string;
+  question: string;
+  correct_answer: string;
+  points: number | null;
 }
 
 export default async function StationPage({ params }: PageProps) {
   const { stationId } = await params;
   const supabase = createClient();
 
-  const [{ data: stationData }, { data: siteData }] = await Promise.all([
+  const [{ data: stationData }, { data: siteData }, { data: quizData }] = await Promise.all([
     supabase.from('stations').select('name').eq('id', stationId).single(),
     supabase
       .from('attractions')
-      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius')
+      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius,has_quiz_challenge')
       .eq('station_id', stationId)
       .eq('is_verified', true)
       .order('name', { ascending: true }),
+    supabase
+      .from('quizzes')
+      .select('id,site_id,question,correct_answer,points'),
   ]);
 
   const stationName = stationData?.name ??
@@ -40,6 +52,28 @@ export default async function StationPage({ params }: PageProps) {
           .join(' ')
       : 'Unknown Station');
 
+  // Group quizzes by site_id for easy lookup
+  const quizzesByAttraction = (quizData ?? []).reduce(
+    (acc, quiz: QuizRow) => {
+      if (!acc[quiz.site_id]) {
+        acc[quiz.site_id] = [];
+      }
+      acc[quiz.site_id].push({
+        id: quiz.id,
+        question: quiz.question,
+        correctAnswer: quiz.correct_answer,
+        points: quiz.points,
+      });
+      return acc;
+    },
+    {} as Record<string, Array<{
+      id: string;
+      question: string;
+      correctAnswer: string;
+      points: number | null;
+    }>>
+  );
+
   const attractions = (siteData ?? []).map((site: AttractionRow) => ({
     id: site.id,
     name: site.name,
@@ -49,6 +83,8 @@ export default async function StationPage({ params }: PageProps) {
     latitude: site.latitude ?? undefined,
     longitude: site.longitude ?? undefined,
     checkInRadius: site.check_in_radius ?? 300,
+    hasQuizChallenge: site.has_quiz_challenge ?? false,
+    quizzes: quizzesByAttraction[site.id] ?? [],
   }));
 
   return (

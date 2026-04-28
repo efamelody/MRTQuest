@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -9,10 +6,6 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
-
-// ============================================================
-// Better Auth Models (public schema)
-// ============================================================
 
 model User {
   id            String    @id
@@ -25,6 +18,7 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   accounts      Account[]
   sessions      Session[]
+  profiles      Profile?
 
   @@map("ba_user")
 }
@@ -75,19 +69,15 @@ model Verification {
   @@map("ba_verification")
 }
 
-// ============================================================
-// MRTQuest App Models
-// ============================================================
-
 model Station {
-  id            String        @id @default(uuid())
+  id            String       @id @default(dbgenerated("gen_random_uuid()"))
   name          String
   line          String
   latitude      Float?
   longitude     Float?
-  sequenceOrder Int?          @map("sequence_order")
-  active        Boolean       @default(false)
-  createdAt     DateTime      @default(now()) @map("created_at")
+  sequenceOrder Int?         @map("sequence_order")
+  active        Boolean      @default(false)
+  createdAt     DateTime     @default(now()) @map("created_at")
   attractions   Attraction[]
   badges        Badge[]
 
@@ -95,44 +85,48 @@ model Station {
 }
 
 model Attraction {
-  id                  String        @id @default(uuid())
-  stationId           String?       @map("station_id")
+  id                  String   @id @default(dbgenerated("gen_random_uuid()"))
+  stationId           String?  @map("station_id")
   name                String
   description         String?
   latitude            Float?
   longitude           Float?
-  imageUrl            String?       @map("image_url")
-  googleMap           String?       @map("google_map")
+  imageUrl            String?  @map("image_url")
+  googleMap           String?  @map("google_map")
   category            String?
-  isVerified          Boolean       @default(false) @map("is_verified")
-  verificationType    String        @default("quiz") @map("verification_type")
-  checkInRadius       Int           @default(300) @map("check_in_radius")
-  correctQuizAnswer   String?       @map("correct_quiz_answer")
-  createdAt           DateTime      @default(now()) @map("created_at")
-  station             Station?      @relation(fields: [stationId], references: [id])
+  isVerified          Boolean  @default(false) @map("is_verified")
+  verificationType    String   @default("quiz") @map("verification_type")
+  checkInRadius       Int      @default(300) @map("check_in_radius")
+  correctQuizAnswer   String?  @map("correct_quiz_answer")
+  createdAt           DateTime @default(now()) @map("created_at")
+  has_photo_challenge Boolean? @default(false)
+  ai_prompt           String?
+  has_quiz_challenge  Boolean? @default(false)
+  station             Station? @relation(fields: [stationId], references: [id])
+  quizzes             Quiz[]
   reviews             Review[]
   visits              Visit[]
-  quizzes             Quiz[]
 
   @@index([stationId])
   @@map("attractions")
 }
 
 model Profile {
-  id        String         @id
-  username  String?        @unique
-  avatarUrl String?        @map("avatar_url")
-  createdAt DateTime       @default(now()) @map("created_at")
+  id        String            @id
+  username  String?           @unique
+  avatarUrl String?           @map("avatar_url")
+  createdAt DateTime          @default(now()) @map("created_at")
+  ba_user   User              @relation(fields: [id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   reviews   Review[]
-  visits    Visit[]
   badges    UserBadge[]
   quizzes   UserQuizAttempt[]
+  visits    Visit[]
 
   @@map("profiles")
 }
 
 model Badge {
-  id             String      @id @default(uuid())
+  id             String      @id @default(dbgenerated("gen_random_uuid()"))
   name           String
   description    String?
   icon           String?
@@ -148,12 +142,12 @@ model Badge {
 }
 
 model UserBadge {
-  id       String    @id @default(uuid())
-  userId   String    @map("user_id")
-  badgeId  String    @map("badge_id")
-  earnedAt DateTime  @default(now()) @map("earned_at")
-  user     Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  badge    Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  id       String   @id @default(dbgenerated("gen_random_uuid()"))
+  userId   String   @map("user_id")
+  badgeId  String   @map("badge_id")
+  earnedAt DateTime @default(now()) @map("earned_at")
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user     Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([badgeId])
@@ -161,14 +155,14 @@ model UserBadge {
 }
 
 model Review {
-  id         String    @id @default(uuid())
-  userId     String    @map("user_id")
-  siteId     String    @map("site_id")
+  id         String     @id @default(dbgenerated("gen_random_uuid()"))
+  userId     String     @map("user_id")
+  siteId     String     @map("site_id")
   rating     Int
   comment    String?
-  createdAt  DateTime  @default(now()) @map("created_at")
-  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime   @default(now()) @map("created_at")
   attraction Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user       Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([siteId])
@@ -176,14 +170,14 @@ model Review {
 }
 
 model Visit {
-  id                String    @id @default(uuid())
-  userId            String    @map("user_id")
-  siteId            String    @map("site_id")
-  visitedAt         DateTime  @default(now()) @map("visited_at")
-  verificationType  String    @map("verification_type")
-  verifiedAt        DateTime? @map("verified_at")
-  user              Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  attraction        Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  id               String     @id @default(dbgenerated("gen_random_uuid()"))
+  userId           String     @map("user_id")
+  siteId           String     @map("site_id")
+  visitedAt        DateTime   @default(now()) @map("visited_at")
+  verificationType String     @map("verification_type")
+  verifiedAt       DateTime?  @map("verified_at")
+  attraction       Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user             Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([siteId])
@@ -191,11 +185,12 @@ model Visit {
 }
 
 model Quiz {
-  id            String           @id @default(uuid())
-  siteId        String           @map("site_id")
+  id            String            @id @default(uuid())
+  siteId        String            @map("site_id")
   question      String
-  correctAnswer String           @map("correct_answer")
-  attraction    Attraction       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  correctAnswer String            @map("correct_answer")
+  points        Int?              @default(50)
+  attraction    Attraction        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   attempts      UserQuizAttempt[]
 
   @@index([siteId])
@@ -203,13 +198,15 @@ model Quiz {
 }
 
 model UserQuizAttempt {
-  id         String    @id @default(uuid())
-  userId     String    @map("user_id")
-  quizId     String    @map("quiz_id")
-  isCorrect  Boolean?  @map("is_correct")
-  attemptedAt DateTime @default(now()) @map("attempted_at")
-  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  quiz       Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  id              String   @id @default(uuid())
+  userId          String   @map("user_id")
+  quizId          String   @map("quiz_id")
+  isCorrect       Boolean? @map("is_correct")
+  attemptedAt     DateTime @default(now()) @map("attempted_at")
+  answer_provided String?
+  points_earned   Int?     @default(0)
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  user            Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([quizId])
