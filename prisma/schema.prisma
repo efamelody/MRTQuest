@@ -1,0 +1,226 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public", "auth"]
+}
+
+// ============================================================
+// Better Auth Models (public schema)
+// ============================================================
+
+model User {
+  id            String    @id
+  name          String?
+  email         String?   @unique
+  username      String?   @unique
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("ba_user")
+  @@schema("public")
+}
+
+model Account {
+  id                    String    @id
+  userId                String    @map("user_id")
+  accountId             String    @map("account_id")
+  providerId            String    @map("provider_id")
+  accessToken           String?   @map("access_token")
+  refreshToken          String?   @map("refresh_token")
+  idToken               String?   @map("id_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ba_account")
+  @@schema("public")
+}
+
+model Session {
+  id        String   @id
+  userId    String   @map("user_id")
+  token     String   @unique
+  expiresAt DateTime @map("expires_at")
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("ba_session")
+  @@schema("public")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("ba_verification")
+  @@schema("public")
+}
+
+// ============================================================
+// MRTQuest App Models
+// ============================================================
+
+model Station {
+  id            String        @id @default(uuid())
+  name          String
+  line          String
+  latitude      Float?
+  longitude     Float?
+  sequenceOrder Int?          @map("sequence_order")
+  active        Boolean       @default(false)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  attractions   Attraction[]
+  badges        Badge[]
+
+  @@map("stations")
+  @@schema("public")
+}
+
+model Attraction {
+  id          String        @id @default(uuid())
+  stationId   String?       @map("station_id")
+  name        String
+  description String?
+  latitude    Float?
+  longitude   Float?
+  imageUrl    String?       @map("image_url")
+  googleMap   String?       @map("google_map")
+  category    String?
+  createdAt   DateTime      @default(now()) @map("created_at")
+  station     Station?      @relation(fields: [stationId], references: [id])
+  reviews     Review[]
+  visits      Visit[]
+  quizzes     Quiz[]
+
+  @@index([stationId])
+  @@map("attractions")
+  @@schema("public")
+}
+
+model Profile {
+  id        String         @id
+  username  String?        @unique
+  avatarUrl String?        @map("avatar_url")
+  createdAt DateTime       @default(now()) @map("created_at")
+  reviews   Review[]
+  visits    Visit[]
+  badges    UserBadge[]
+  quizzes   UserQuizAttempt[]
+
+  @@map("profiles")
+  @@schema("public")
+}
+
+model Badge {
+  id             String      @id @default(uuid())
+  name           String
+  description    String?
+  icon           String?
+  criteriaType   String?     @map("criteria_type")
+  criteriaValue  Int?        @map("criteria_value")
+  criteriaTarget String?     @map("criteria_target")
+  stationId      String?     @map("station_id")
+  station        Station?    @relation(fields: [stationId], references: [id])
+  userBadges     UserBadge[]
+
+  @@index([stationId])
+  @@map("badges")
+  @@schema("public")
+}
+
+model UserBadge {
+  id       String    @id @default(uuid())
+  userId   String    @map("user_id")
+  badgeId  String    @map("badge_id")
+  earnedAt DateTime  @default(now()) @map("earned_at")
+  user     Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge    Badge     @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([badgeId])
+  @@map("user_badges")
+  @@schema("public")
+}
+
+model Review {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  siteId     String    @map("site_id")
+  rating     Int
+  comment    String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attraction Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([siteId])
+  @@map("reviews")
+  @@schema("public")
+}
+
+model Visit {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  siteId     String    @map("site_id")
+  visitedAt  DateTime  @default(now()) @map("visited_at")
+  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attraction Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([siteId])
+  @@map("visits")
+  @@schema("public")
+}
+
+model Quiz {
+  id            String           @id @default(uuid())
+  siteId        String           @map("site_id")
+  question      String
+  correctAnswer String           @map("correct_answer")
+  attraction    Attraction       @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  attempts      UserQuizAttempt[]
+
+  @@index([siteId])
+  @@map("quizzes")
+  @@schema("public")
+}
+
+model UserQuizAttempt {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  quizId     String    @map("quiz_id")
+  isCorrect  Boolean?  @map("is_correct")
+  attemptedAt DateTime @default(now()) @map("attempted_at")
+  user       Profile   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quiz       Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([quizId])
+  @@map("user_quiz_attempts")
+  @@schema("public")
+}

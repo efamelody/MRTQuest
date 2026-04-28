@@ -8,7 +8,7 @@ export function TabBar() {
   const router = useRouter();
 
   const tabs = [
-    { href: '/explore', label: 'Explore', icon: TrainFront },
+    { href: '/', label: 'Explore', icon: TrainFront },
     { href: '/badge', label: 'Badge', icon: Stamp },
     { href: '/passport', label: 'Passport', icon: Album },
   ];
