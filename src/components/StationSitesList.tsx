@@ -32,9 +32,9 @@ interface StationSitesListProps {
 
 export function StationSitesList({ sites }: StationSitesListProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sites.map((site) => (
-        <div key={site.id}>
+        <div key={site.id} className="space-y-2">
           <AttractionCheckInCard
             id={site.id}
             name={site.name}
@@ -47,14 +47,12 @@ export function StationSitesList({ sites }: StationSitesListProps) {
             checkInRadius={site.checkInRadius}
           />
           {site.hasQuizChallenge && site.quizzes && site.quizzes.length > 0 && (
-            <div className="pl-0">
-              <QuizCard
-                attractionId={site.id}
-                attractionName={site.name}
-                quizzes={site.quizzes}
-                hasQuizChallenge={site.hasQuizChallenge}
-              />
-            </div>
+            <QuizCard
+              attractionId={site.id}
+              attractionName={site.name}
+              quizzes={site.quizzes}
+              hasQuizChallenge={site.hasQuizChallenge}
+            />
           )}
         </div>
       ))}
