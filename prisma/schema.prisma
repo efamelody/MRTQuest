@@ -20,6 +20,7 @@ model User {
   id            String    @id
   name          String?
   email         String?   @unique
+  username      String?   @unique
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now()) @map("created_at")
@@ -142,7 +143,7 @@ model Badge {
   icon           String?
   criteriaType   String?     @map("criteria_type")
   criteriaValue  Int?        @map("criteria_value")
-  criteriaTarget String?     @map("criter_target")
+  criteriaTarget String?     @map("criteria_target")
   stationId      String?     @map("station_id")
   station        Station?    @relation(fields: [stationId], references: [id])
   userBadges     UserBadge[]

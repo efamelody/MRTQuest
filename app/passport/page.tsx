@@ -157,7 +157,10 @@ export default function PassportPage() {
           </div>
           <h1 className="font-gamified text-4xl tracking-tight text-heading">Passport</h1>
           {isAuthenticated && (
-            <p className="mt-2 text-sm uppercase tracking-[0.25em] text-slate-500">{rankLabel}</p>
+            <>
+              <p className="mt-2 text-lg font-bold text-heading">{session?.user?.name || 'Explorer'}</p>
+              <p className="mt-1 text-sm uppercase tracking-[0.25em] text-slate-500">{rankLabel}</p>
+            </>
           )}
           <p className="mt-4 text-sm text-slate-600">A travel journal for your MRTQuest adventures. Save stamps, earn badges, and keep your mission moving.</p>
         </section>

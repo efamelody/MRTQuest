@@ -10,6 +10,8 @@ export default function LoginPage() {
   const { data: session, isPending: isSessionLoading } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   // Redirect to passport if already authenticated
   useEffect(() => {
@@ -29,6 +31,49 @@ export default function LoginPage() {
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to sign in with Google"
+      );
+      setIsLoading(false);
+    }
+  };
+
+  const handleUsernameSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      if (!username || !password) {
+        setError("Username and password are required");
+        setIsLoading(false);
+        return;
+      }
+
+      // Look up email by username
+      const emailRes = await fetch("/api/auth/signin-with-username", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username }),
+      });
+
+      if (!emailRes.ok) {
+        setError("Username not found");
+        setIsLoading(false);
+        return;
+      }
+
+      const { email } = await emailRes.json();
+
+      // Sign in with email and password
+      await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/passport",
+      });
+
+      router.push("/passport");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Failed to sign in"
       );
       setIsLoading(false);
     }
@@ -82,7 +127,7 @@ export default function LoginPage() {
 
         {/* MIDDLE SECTION: LOGIN OPTIONS */}
         <div className="p-8 pt-4">
-          <div className="mb-8">
+          <div className="mb-6">
             <h3 className="text-xl font-bold text-heading mb-2">
               Identify Yourself
             </h3>
@@ -99,6 +144,50 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* SIGNIN FORM */}
+          <form onSubmit={handleUsernameSignIn} className="space-y-3 mb-6">
+            <div>
+              <label className="text-xs font-bold text-slate-700 uppercase">Username</label>
+              <input
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Enter your username"
+                disabled={isLoading}
+                className="w-full mt-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-700 uppercase">Password</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your password"
+                disabled={isLoading}
+                className="w-full mt-1 px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-2xl font-bold hover:bg-primary/90 transition-all active:scale-95 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+              Sign In
+            </button>
+          </form>
+
+          {/* DIVIDER */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="px-2 bg-white text-slate-500">or</span>
+            </div>
+          </div>
+
           <div className="space-y-3">
             {/* GOOGLE LOGIN */}
             <button
@@ -110,13 +199,14 @@ export default function LoginPage() {
               Continue with Google
             </button>
 
-            {/* NOTE: Email magic link support coming soon */}
+            {/* SIGNUP WITH USERNAME */}
             <button
-              disabled
-              className="w-full flex items-center justify-center gap-3 py-4 bg-slate-100 text-slate-400 rounded-2xl font-bold cursor-not-allowed opacity-50"
+              type="button"
+              onClick={() => router.push("/signup")}
+              className="w-full flex items-center justify-center gap-3 py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold hover:bg-slate-200 transition-all active:scale-95 shadow-lg"
             >
               <Mail className="w-5 h-5" />
-              Email Sign-in (Coming Soon)
+              New? Sign up with Username
             </button>
           </div>
         </div>
