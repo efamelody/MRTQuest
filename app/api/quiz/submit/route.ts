@@ -51,14 +51,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch quiz data for this attraction
+    // Fetch quiz data for this attraction (ordered by sortOrder)
     const quizzes = await prisma.quiz.findMany({
       where: { siteId: attractionId },
       select: {
         id: true,
         question: true,
         correctAnswer: true,
+        options: true,
         points: true,
+      },
+      orderBy: {
+        sortOrder: 'asc',
       },
     });
 
@@ -78,11 +82,18 @@ export async function POST(request: NextRequest) {
       const userAnswer = answers[quiz.id];
 
       // If user didn't answer this question, skip it
-      if (userAnswer === undefined || userAnswer === null) {
+      if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
         return;
       }
 
-      const isCorrect = userAnswer.toLowerCase().trim() === quiz.correctAnswer.toLowerCase().trim();
+      // Validate that userAnswer is one of the provided options
+      const isValidOption = quiz.options.includes(userAnswer);
+      if (!isValidOption) {
+        throw new Error(`Invalid answer for question: ${quiz.question}`);
+      }
+
+      // Compare selected option against correctAnswer (exact match, case-sensitive)
+      const isCorrect = userAnswer === quiz.correctAnswer;
       const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
 
       if (isCorrect) {

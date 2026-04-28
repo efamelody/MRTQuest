@@ -9,7 +9,9 @@ interface Quiz {
   id: string;
   question: string;
   correctAnswer: string;
+  options: string[];
   points: number | null;
+  sortOrder?: number;
 }
 
 interface QuizCardProps {
@@ -52,6 +54,9 @@ export default function QuizCard({
     return null;
   }
 
+  // Sort quizzes by sortOrder
+  const sortedQuizzes = [...quizzes].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+
   const handleAnswerChange = (quizId: string, answer: string) => {
     setSelectedAnswers((prev) => ({
       ...prev,
@@ -59,7 +64,7 @@ export default function QuizCard({
     }));
   };
 
-  const isAllAnswered = quizzes.every((quiz) => selectedAnswers[quiz.id]);
+  const isAllAnswered = sortedQuizzes.every((quiz) => selectedAnswers[quiz.id]);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
@@ -174,21 +179,32 @@ export default function QuizCard({
       )}
 
       <div className="space-y-6 mb-6">
-        {quizzes.map((quiz) => (
+        {sortedQuizzes.map((quiz, index) => (
           <div key={quiz.id} className="border-b border-slate-200 pb-6 last:border-b-0 last:pb-0">
-            <p className="font-semibold text-slate-900 mb-4">{quiz.question}</p>
+            <p className="font-semibold text-slate-900 mb-4">
+              <span className="text-slate-500 text-sm">Q{index + 1}. </span>
+              {quiz.question}
+            </p>
             <div className="space-y-3">
-              {/* Simple text input for quiz answer */}
-              <input
-                type="text"
-                placeholder="Type your answer here..."
-                value={selectedAnswers[quiz.id] || ''}
-                onChange={(e) => handleAnswerChange(quiz.id, e.target.value)}
-                className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-[#00A959] focus:outline-none transition"
-              />
+              {quiz.options.map((option) => (
+                <label
+                  key={option}
+                  className="flex items-center gap-3 p-3 border-2 border-slate-200 rounded-lg cursor-pointer hover:border-[#00A959] hover:bg-slate-50 transition"
+                >
+                  <input
+                    type="radio"
+                    name={`quiz-${quiz.id}`}
+                    value={option}
+                    checked={selectedAnswers[quiz.id] === option}
+                    onChange={(e) => handleAnswerChange(quiz.id, e.target.value)}
+                    className="w-4 h-4 cursor-pointer"
+                  />
+                  <span className="text-slate-700 font-medium">{option}</span>
+                </label>
+              ))}
             </div>
             {quiz.points && (
-              <p className="text-xs text-slate-500 mt-2">+{quiz.points} points if correct</p>
+              <p className="text-xs text-slate-500 mt-3">+{quiz.points} points if correct</p>
             )}
           </div>
         ))}

@@ -190,6 +190,8 @@ model Quiz {
   question      String
   correctAnswer String            @map("correct_answer")
   points        Int?              @default(50)
+  options       String[]
+  sortOrder     Int?              @default(0) @map("sort_order")
   attraction    Attraction        @relation(fields: [siteId], references: [id], onDelete: Cascade)
   attempts      UserQuizAttempt[]
 
@@ -208,6 +210,7 @@ model UserQuizAttempt {
   quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   user            Profile  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, quizId], map: "unique_user_quiz")
   @@index([userId])
   @@index([quizId])
   @@map("user_quiz_attempts")

@@ -24,6 +24,8 @@ interface QuizRow {
   site_id: string;
   question: string;
   correct_answer: string;
+  options: string[];
+  sort_order: number | null;
   points: number | null;
 }
 
@@ -41,7 +43,8 @@ export default async function StationPage({ params }: PageProps) {
       .order('name', { ascending: true }),
     supabase
       .from('quizzes')
-      .select('id,site_id,question,correct_answer,points'),
+      .select('id,site_id,question,correct_answer,options,sort_order,points')
+      .order('sort_order', { ascending: true }),
   ]);
 
   const stationName = stationData?.name ??
@@ -62,6 +65,8 @@ export default async function StationPage({ params }: PageProps) {
         id: quiz.id,
         question: quiz.question,
         correctAnswer: quiz.correct_answer,
+        options: quiz.options || [],
+        sortOrder: quiz.sort_order || 0,
         points: quiz.points,
       });
       return acc;
@@ -70,6 +75,8 @@ export default async function StationPage({ params }: PageProps) {
       id: string;
       question: string;
       correctAnswer: string;
+      options: string[];
+      sortOrder: number;
       points: number | null;
     }>>
   );
