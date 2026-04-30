@@ -1,12 +1,27 @@
 # Badge Logic Documentation
 
-This document defines the badge schema and the business logic for badge awarding in MRTQuest.
+This document defines the badge schema, business logic, and UI implementation for badge awarding in MRTQuest.
 
-> WARNING: This schema is for context only and is not meant to be run. Table order and constraints may not be valid for execution.
+## Implementation Status
+
+### ✅ Completed
+- Badge display system with 5-tab filtering (All, Earned, Featured, Stamps, Quests)
+- Three-category badge organization (Featured, Stamps, Quests)
+- Better Auth integration for user session tracking
+- Supabase schema with corrected field names (`criteria_target` instead of `criter_target`)
+- Badge fetching and grouping logic
+
+### 🚧 In Progress / To-Do
+- Badge awarding engine (post-action evaluation)
+- Integration points for award triggers (check-in, review, quiz submission)
+- API routes for visits, reviews, and quiz attempts
+- Toast/modal UI for newly earned badges
+
+---
 
 ## Schema Reference
 
-### `badges`
+### `badges` Table
 
 ```sql
 CREATE TABLE public.badges (
@@ -14,258 +29,293 @@ CREATE TABLE public.badges (
   name text NOT NULL,
   description text,
   icon text,
-  criteria_type text,
+  criteria_type text NOT NULL,
   criteria_value smallint,
-  criter_target text,
-  CONSTRAINT badges_pkey PRIMARY KEY (id)
+  criteria_target text,
+  station_id uuid,
+  created_at timestamp without time zone DEFAULT now(),
+  CONSTRAINT badges_pkey PRIMARY KEY (id),
+  CONSTRAINT badges_station_id_fkey FOREIGN KEY (station_id) REFERENCES public.stations(id)
 );
 ```
 
-- `id`: Badge UUID.
-- `name`: Human-friendly badge label.
-- `description`: What the badge represents or how to unlock it.
-- `icon`: Optional emoji or icon identifier.
-- `criteria_type`: The category of unlock logic.
-- `criteria_value`: Numeric target for the criteria.
-- `criter_target`: Target metadata for the criteria (line name, site ID, category, etc.).
+**Fields:**
+- `id`: Badge UUID
+- `name`: Human-friendly badge label (e.g., "Kajang Conqueror")
+- `description`: What the badge represents and how to unlock it
+- `icon`: Emoji or Unicode icon identifier
+- `criteria_type`: Category of unlock logic (see **Criteria Types** below)
+- `criteria_value`: Numeric target for the criteria (threshold or count)
+- `criteria_target`: Target metadata (line name, category, station UUID, time condition, etc.)
+- `station_id`: Optional reference to specific station (for `station_stamp` badges)
 
-### `user_badges`
+### `user_badges` Table
 
 ```sql
 CREATE TABLE public.user_badges (
   id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid,
-  badge_id uuid,
+  user_id uuid NOT NULL,
+  badge_id uuid NOT NULL,
   earned_at timestamp without time zone DEFAULT now(),
   CONSTRAINT user_badges_pkey PRIMARY KEY (id),
-  CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT user_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id)
+  CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE,
+  CONSTRAINT user_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id) ON DELETE CASCADE,
+  CONSTRAINT user_badges_unique UNIQUE(user_id, badge_id)
 );
 ```
 
-- `user_id`: The user who earned the badge.
-- `badge_id`: The badge definition.
-- `earned_at`: Timestamp when the badge was awarded.
+**Fields:**
+- `user_id`: The user who earned the badge (from Better Auth)
+- `badge_id`: Reference to the badge definition
+- `earned_at`: Timestamp when the badge was awarded (defaults to now)
 
-## Supporting Tables
-
-### `stations`
-
-```sql
-CREATE TABLE public.stations (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  name text NOT NULL,
-  line text NOT NULL,
-  latitude double precision,
-  longitude double precision,
-  created_at timestamp without time zone DEFAULT now(),
-  sequence_order integer,
-  CONSTRAINT stations_pkey PRIMARY KEY (id)
-);
-```
-
-### `attractions`
-
-```sql
-CREATE TABLE public.attractions (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  station_id uuid,
-  name text NOT NULL,
-  description text,
-  latitude double precision,
-  longitude double precision,
-  image_url text,
-  created_at timestamp without time zone DEFAULT now(),
-  google_map text,
-  category text,
-  CONSTRAINT attractions_pkey PRIMARY KEY (id),
-  CONSTRAINT attractions_station_id_fkey FOREIGN KEY (station_id) REFERENCES public.stations(id)
-);
-```
-
-### `visits`
-
-```sql
-CREATE TABLE public.visits (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid,
-  site_id uuid,
-  visited_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT visits_pkey PRIMARY KEY (id),
-  CONSTRAINT visits_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT visits_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.attractions(id)
-);
-```
-
-### `quizzes`
-
-```sql
-CREATE TABLE public.quizzes (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  site_id uuid,
-  question text NOT NULL,
-  correct_answer text NOT NULL,
-  CONSTRAINT quizzes_pkey PRIMARY KEY (id),
-  CONSTRAINT quizzes_site_id_fkey FOREIGN KEY (site_id) REFERENCES public.attractions(id)
-);
-```
-
-### `user_quiz_attempts`
-
-```sql
-CREATE TABLE public.user_quiz_attempts (
-  id uuid NOT NULL DEFAULT uuid_generate_v4(),
-  user_id uuid,
-  quiz_id uuid,
-  is_correct boolean,
-  attempted_at timestamp without time zone DEFAULT now(),
-  CONSTRAINT user_quiz_attempts_pkey PRIMARY KEY (id),
-  CONSTRAINT user_quiz_attempts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id),
-  CONSTRAINT user_quiz_attempts_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(id)
-);
-```
+---
 
 ## Badge Criteria Types
 
-This schema supports flexible badge requirements using `criteria_type`, `criteria_value`, and `criter_target`.
+The system supports **8 criteria types** that can be mixed and matched to create flexible badge requirements:
 
-### Common badge criteria
+| **Type** | **Trigger** | **criteria_value** | **criteria_target** | **Description** |
+|----------|------------|-------------------|-------------------|---|
+| `visit_count` | User visits attraction | N (count) | `null` or category/line | Award when user reaches N total/scoped visits |
+| `line_master` | User visits attractions | All stations on line | `Kajang Line` / `Putrajaya Line` | Award when user visits all stations on a line |
+| `station_stamp` | User visits station | 1 | Station UUID | Award for visiting a specific station |
+| `quiz_master` | User answers quiz correctly | N (count) | `site_id` or `all` | Award after N correct quiz attempts |
+| `first_review` | User submits review | 1 | `null` | Award after first review submission |
+| `photo_review` | User submits photo review | N (count) | `has_image` | Award after N reviews with images |
+| `time_check` | User checks in during time window | Hour (0-23) | `before` or `after` | Award for check-in before/after specific hour |
+| `multi_line` | User checks in across lines | Line count | `line1, line2, ...` | Award when user visits N different lines |
 
-- `visit_count`
-  - award after a user visits a number of attractions.
-  - `criteria_value`: number of unique attraction visits.
-  - `criter_target`: optional category or line.
+---
 
-- `line_master`
-  - award when a user has visited every station or every attraction on a line.
-  - `criteria_value`: total number of required stations or sites.
-  - `criter_target`: line name (e.g. `Kajang Line` or `Putrajaya Line`).
+## Frontend Display Organization
 
-- `quiz_master`
-  - award when a user answers a site quiz correctly.
-  - `criteria_value`: number of correct attempts required.
-  - `criter_target`: site ID or site category.
+Badges are organized into **3 display categories** on the badge page for better UX:
 
-- `first_review`
-  - award after the first review is submitted.
-  - `criteria_value`: typically `1`.
-  - `criter_target`: optional site ID or category.
+### 1. Featured Achievements 👑
+- **Criteria Types:** `line_master`, `milestone`
+- **Purpose:** Major accomplishments and line mastery
+- **Visual:** Crown icon, amber color
+- **Examples:** "Kajang Conqueror", "Putrajaya Pioneer"
 
-- `frequent_traveler`
-  - award after visiting multiple sites or returning multiple times.
-  - `criteria_value`: threshold count.
-  - `criter_target`: optional time frame or line.
+### 2. Station Stamps 🎫
+- **Criteria Types:** `station_stamp`
+- **Purpose:** Collect stamps from iconic stations
+- **Visual:** Ticket icon, blue color
+- **Examples:** "Pasar Seni Stamp", "TRX Trailblazer", "Merdeka Medal"
 
-## Example Badge Definitions
+### 3. Special Quests ⚡
+- **Criteria Types:** `time_check`, `multi_line`, `photo_review`, `quiz_master`
+- **Purpose:** Challenge badges with special conditions
+- **Visual:** Zap icon, purple color
+- **Examples:** "Golden Hour Guest", "Mind The Gap", "Heritage Scholar"
 
-```sql
-INSERT INTO public.badges (name, description, icon, criteria_type, criteria_value, criter_target)
-VALUES
-  ('Kajang Line Master', 'Visit every station on the Kajang Line.', '🥇', 'line_master', 10, 'Kajang Line'),
-  ('Putrajaya Explorer', 'Visit 5 attractions on the Putrajaya Line.', '🥈', 'visit_count', 5, 'Putrajaya Line'),
-  ('Attraction Scholar', 'Answer all quizzes correctly for one attraction.', '🎓', 'quiz_master', 1, 'site'),
-  ('Frequent Traveler', 'Visit 20 attractions overall.', '✈️', 'visit_count', 20, NULL);
+### Tab Filtering System
+
+**5 tabs** on the badge page for flexible viewing:
+
+| **Tab** | **Shows** | **Purpose** |
+|---------|-----------|-----------|
+| **All** | All badges across all categories | See full collection |
+| **Earned** | Only badges user has earned | View achievements |
+| **Featured** | Line mastery badges only | Focus on major milestones |
+| **Stamps** | Station-specific badges only | Collect station achievements |
+| **Quests** | Challenge badges only | Track special quests |
+
+**Implementation:** Sticky tab bar in `/app/badge/page.tsx` with dynamic filtering, no page reload
+
+---
+
+## Current Badge Examples
+
+### Featured Achievements (Line Mastery)
+
+| Badge Name | criteria_type | criteria_value | criteria_target | Icon |
+|----------|---|---|---|---|
+| Kajang Conqueror | `line_master` | 29 | `Kajang Line` | 🟢 |
+| Putrajaya Pioneer | `line_master` | 36 | `Putrajaya Line` | 🟡 |
+
+### Station Stamps (Collection)
+
+| Badge Name | criteria_type | criteria_target | Icon |
+|----------|---|---|---|
+| Pasar Seni Stamp | `station_stamp` | `[pasar_seni_id]` | 🎨 |
+| Merdeka Medal | `station_stamp` | `[merdeka_id]` | 🇲🇾 |
+| TRX Trailblazer | `station_stamp` | `[trx_id]` | 💎 |
+| Bukit Bintang Stamp | `station_stamp` | `[bukit_bintang_id]` | 🏙️ |
+
+### Special Quests (Challenges)
+
+| Badge Name | criteria_type | criteria_value | criteria_target | Icon |
+|----------|---|---|---|---|
+| Heritage Scholar | `quiz_master` | 10 | `all` | 🎓 |
+| Golden Hour Guest | `time_check` | 18 | `after` | 🌅 |
+| Mind The Gap | `multi_line` | 2 | `Kajang, Putrajaya` | 🚇 |
+| Aesthetic Alchemist | `photo_review` | 5 | `has_image` | 📸 |
+
+### Visit Count Badges (Progress)
+
+| Badge Name | criteria_type | criteria_value | criteria_target | Icon |
+|----------|---|---|---|---|
+| First Stamp | `visit_count` | 1 | `null` | 🎫 |
+| Urban Legend | `visit_count` | 50 | `null` | 🏆 |
+| Masjid Hopper | `visit_count` | 3 | `Mosque` | 🕌 |
+| Stair Master | `visit_count` | 3 | `Deep Stations` | 🧗 |
+
+---
+
+## Badge Display Logic (Current Implementation)
+
+**File:** `/app/badge/page.tsx`
+
+### User Authentication
+
+Uses **Better Auth** for session management (not Supabase auth):
+
+```typescript
+import { useSession } from '@/utils/auth-client';
+
+const { data: session } = useSession();
+const currentUserId = session?.user?.id ?? '';
 ```
 
-## Badge Fetch Logic
+### Badge Fetching
 
-The app should fetch all badge definitions and overlay user progress from `user_badges`.
+Fetches from Supabase with relationships:
 
-### Recommended query pattern
+```typescript
+const supabase = createClient();
 
-```sql
-SELECT
-  b.*,
-  ub.earned_at
-FROM public.badges b
-LEFT JOIN public.user_badges ub
-  ON ub.badge_id = b.id
-  AND ub.user_id = :current_user_id;
-```
-
-In Supabase JavaScript:
-
-```js
-const { data, error } = await supabase
+const query = supabase
   .from('badges')
-  .select('*, user_badges(earned_at)')
-  .eq('user_badges.user_id', currentUserId);
+  .select('id,name,description,icon,criteria_type,criteria_value,criteria_target,station_id,stations(active),user_badges(earned_at,user_id)')
+  .order('name', { ascending: true });
+
+const { data: badges } = await query;
 ```
 
-## Awarding Logic Examples
+### Badge Categorization
 
-### 1. Visit count badge
-
-Check if user has `criteria_value` unique visits.
-
-```sql
-SELECT COUNT(DISTINCT v.site_id) AS visit_count
-FROM public.visits v
-WHERE v.user_id = :current_user_id;
+```typescript
+const categorizedBadges = useMemo(() => {
+  return {
+    featured: badges.filter((b) => ['line_master', 'milestone'].includes(b.criteria_type ?? '')),
+    stamps: badges.filter((b) => b.criteria_type === 'station_stamp'),
+    quests: badges.filter((b) => ['time_check', 'multi_line', 'photo_review', 'quiz_master'].includes(b.criteria_type ?? '')),
+  };
+}, [badges]);
 ```
 
-### 2. Line master badge
+### Tab Filtering
 
-For a line-based badge, compare visited stations against the lines station count.
+Dynamic filtering based on selected tab:
 
-```sql
-WITH line_stations AS (
-  SELECT id
-  FROM public.stations
-  WHERE line = 'Kajang Line'
-), visited_sites AS (
-  SELECT DISTINCT hs.station_id
-  FROM public.visits v
-  JOIN public.attractions hs ON hs.id = v.site_id
-  WHERE v.user_id = :current_user_id
-    AND hs.station_id IN (SELECT id FROM line_stations)
-)
-SELECT COUNT(*) AS visited_count
-FROM visited_sites;
+```typescript
+const filteredBadgesForTab = useMemo(() => {
+  switch (activeTab) {
+    case 'earned': {
+      const earned = badges.filter((b) => b.user_badges?.length);
+      return categorizeByType(earned);
+    }
+    case 'featured':
+      return { featured: categorizedBadges.featured, stamps: [], quests: [] };
+    case 'stamps':
+      return { featured: [], stamps: categorizedBadges.stamps, quests: [] };
+    case 'quests':
+      return { featured: [], stamps: [], quests: categorizedBadges.quests };
+    default:
+      return categorizedBadges;
+  }
+}, [activeTab, badges]);
 ```
 
-If `visited_count` matches the lines station count, award the badge.
+### Earned Badge Detection
 
-### 3. Quiz master badge
+A badge is marked as "earned" if it has at least one `user_badges` record:
 
-Award when the user has a correct quiz attempt for the target site or category.
-
-```sql
-SELECT COUNT(DISTINCT uqa.quiz_id) AS correct_quizzes
-FROM public.user_quiz_attempts uqa
-JOIN public.quizzes q ON q.id = uqa.quiz_id
-WHERE uqa.user_id = :current_user_id
-  AND uqa.is_correct = TRUE
-  AND q.site_id = :target_site_id;
+```typescript
+badge.user_badges?.length > 0
 ```
 
-### 4. First review or frequent traveler
+---
 
-```sql
-SELECT COUNT(*) AS review_count
-FROM public.reviews
-WHERE user_id = :current_user_id;
+## Badge Awarding Workflow (To Be Implemented)
+
+The badge awarding system will follow a **"Post-Action Check"** pattern for efficiency:
+
+1. **User performs action** → Check-in, review submission, or quiz attempt
+2. **Record inserted** → Data added to `visits`, `reviews`, or `user_quiz_attempts`
+3. **Evaluation triggered** → Call `evaluateBadges(userId)` server action
+4. **Criteria evaluated** → Each badge type checked against user data
+5. **Award badge** → Insert new row to `user_badges` if criteria met
+6. **Notify user** → Return newly earned badges to frontend
+
+### Files to Create
+
+- `/src/utils/badges.ts` — Badge evaluation engine with `evaluateBadges()` function
+- `/app/api/visits/route.ts` — Trigger on check-in
+- `/app/api/reviews/route.ts` — Trigger on review submission
+- `/app/api/quizzes/attempt/route.ts` — Trigger on quiz attempt
+
+### Pseudo-code Example
+
+```typescript
+export async function evaluateBadges(userId: string) {
+  const { data: badges } = await supabase.from('badges').select('*');
+  const newBadges = [];
+
+  for (const badge of badges) {
+    // Skip if already earned
+    const { data: existing } = await supabase
+      .from('user_badges')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('badge_id', badge.id)
+      .limit(1);
+    
+    if (existing?.length) continue;
+
+    // Evaluate badge criteria
+    const isMet = await evaluateCriteria(userId, badge);
+    
+    if (isMet) {
+      await supabase.from('user_badges').insert({
+        user_id: userId,
+        badge_id: badge.id,
+      });
+      newBadges.push(badge);
+    }
+  }
+
+  return newBadges; // Return to frontend for notification
+}
 ```
 
-```sql
-SELECT COUNT(DISTINCT site_id) AS unique_visits
-FROM public.visits
-WHERE user_id = :current_user_id;
-```
+---
 
-## Badge Awarding Workflow
+## Architecture Notes
 
-1. Evaluate each badge definition.
-2. Calculate the matching progress.
-3. If the user meets or exceeds `criteria_value` and does not already have a `user_badges` row, insert a new badge record.
+### Best Practices
 
-```sql
-INSERT INTO public.user_badges (user_id, badge_id)
-VALUES (:current_user_id, :badge_id);
-```
+- **Don't recalculate on view:** Only award badges when users take actions. Keep the display page fast by reading from `user_badges`.
+- **Use `active` field:** Filter stations by `active=true` when evaluating `line_master` and `station_stamp` badges.
+- **Use `sequence_order`:** Display stations in correct order using the `sequence_order` field from stations table.
+- **Avoid complex workers:** Post-action evaluation is sufficient for this app scale.
 
-## Notes
+### Extensibility
 
-- `criter_target` has a spelling mismatch in the schema: it should likely be `criteria_target`.
-- Use `sequence_order` in `stations` to display line station order correctly in the UI.
-- The badge logic can be extended by adding structured criteria metadata or JSON payloads for richer rules.
+Add new badge types without UI changes:
+1. Insert badge record in database with new `criteria_type`
+2. Add evaluation function to `evaluateCriteria()` switch statement
+3. **Done!** The display system automatically handles categorization based on `criteria_type`
+
+### Field Naming
+
+- ✅ `criteria_target` (corrected from legacy `criter_target`)
+- All code and documentation updated to use correct field name
+
+### Authentication
+
+- ✅ Better Auth integrated for session management
+- Uses `session?.user?.id` for user identification
+- Not using Supabase auth for this feature

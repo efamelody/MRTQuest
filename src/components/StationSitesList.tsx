@@ -1,6 +1,16 @@
 'use client';
 
-import Card from '@/components/Card';
+import AttractionCheckInCard from './AttractionCheckInCard';
+import QuizCard from './QuizCard';
+
+interface Quiz {
+  id: string;
+  question: string;
+  correctAnswer: string;
+  options: string[];
+  points: number | null;
+  sortOrder?: number;
+}
 
 interface SiteData {
   id: string;
@@ -9,6 +19,11 @@ interface SiteData {
   image?: string;
   rating?: number;
   googleMap?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  checkInRadius?: number;
+  hasQuizChallenge?: boolean;
+  quizzes?: Quiz[];
 }
 
 interface StationSitesListProps {
@@ -17,26 +32,29 @@ interface StationSitesListProps {
 
 export function StationSitesList({ sites }: StationSitesListProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sites.map((site) => (
-        <Card
-          key={site.id}
-          {...site}
-          onCheckIn={() => {
-            console.log(`Checked in at ${site.name}`);
-            // TODO: integrate with Supabase
-          }}
-          onGetDirections={() => {
-            const directionUrl = site.googleMap ??
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.name)}`;
-
-            console.log(`Opening directions to ${site.name}: ${directionUrl}`);
-            window.open(directionUrl, '_blank', 'noopener,noreferrer');
-          }}
-          onCardClick={() => {
-            console.log(`Viewing details for ${site.name}`);
-          }}
-        />
+        <div key={site.id} className="space-y-2">
+          <AttractionCheckInCard
+            id={site.id}
+            name={site.name}
+            description={site.description}
+            image={site.image}
+            rating={site.rating}
+            googleMap={site.googleMap}
+            latitude={site.latitude}
+            longitude={site.longitude}
+            checkInRadius={site.checkInRadius}
+          />
+          {site.hasQuizChallenge && site.quizzes && site.quizzes.length > 0 && (
+            <QuizCard
+              attractionId={site.id}
+              attractionName={site.name}
+              quizzes={site.quizzes}
+              hasQuizChallenge={site.hasQuizChallenge}
+            />
+          )}
+        </div>
       ))}
     </div>
   );
