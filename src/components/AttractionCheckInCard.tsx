@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getDistance } from 'geolib';
 import Card from '@/components/Card';
+import PhotoCaptureButton from '@/components/PhotoCaptureButton';
 import { createClient } from '@/utils/supabase/client';
 import { useSession } from '@/utils/auth-client';
 
@@ -16,6 +17,7 @@ interface AttractionCheckInCardProps {
   latitude?: number | null;
   longitude?: number | null;
   checkInRadius?: number;
+  hasPhotoChallenge?: boolean;
 }
 
 export default function AttractionCheckInCard({
@@ -28,6 +30,7 @@ export default function AttractionCheckInCard({
   latitude,
   longitude,
   checkInRadius = 300,
+  hasPhotoChallenge = false,
 }: AttractionCheckInCardProps) {
   const { data: session } = useSession();
   const [coords, setCoords] = useState<GeolocationCoordinates | null>(null);
@@ -37,6 +40,7 @@ export default function AttractionCheckInCard({
   const [statusMessage, setStatusMessage] = useState('Allow location to enable check-in.');
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [visitCount, setVisitCount] = useState(0);
 
   const canCheckIn = useMemo(() => {
     return (
@@ -217,22 +221,40 @@ export default function AttractionCheckInCard({
         )}
         {error && <p className="mt-2 text-sm text-rose-600">{error}</p>}
         {successMessage && <p className="mt-2 text-sm text-emerald-700">{successMessage}</p>}
-        <div className="mt-3 flex gap-2">
-          <button
-            type="button"
-            onClick={refreshLocation}
-            className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
-          >
-            Refresh location
-          </button>
-          <button
-            type="button"
-            disabled={!canCheckIn || isSubmitting || isLoadingLocation}
-            className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
-            onClick={handleCheckIn}
-          >
-            {isSubmitting ? 'Checking in…' : 'Check in now'}
-          </button>
+        <div className="mt-3 flex flex-col gap-2">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={refreshLocation}
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-400"
+            >
+              Refresh location
+            </button>
+            <button
+              type="button"
+              disabled={!canCheckIn || isSubmitting || isLoadingLocation}
+              className="rounded-full bg-primary px-3 py-2 text-xs font-semibold text-white transition disabled:cursor-not-allowed disabled:bg-slate-300"
+              onClick={handleCheckIn}
+            >
+              {isSubmitting ? 'Checking in…' : 'Check in now'}
+            </button>
+          </div>
+
+          {hasPhotoChallenge && coords && canCheckIn && (
+            <PhotoCaptureButton
+              attractionId={id}
+              attractionName={name}
+              userLatitude={coords.latitude}
+              userLongitude={coords.longitude}
+              onSuccess={() => {
+                setSuccessMessage('Photo verified! Check-in complete.');
+                setVisitCount(visitCount + 1);
+              }}
+              onError={(errorMsg) => {
+                setError(errorMsg);
+              }}
+            />
+          )}
         </div>
         {!session?.user?.id && (
           <p className="mt-2 text-xs text-slate-500">Sign in on the passport page to save your check-in.</p>

@@ -23,6 +23,7 @@ interface SiteData {
   longitude?: number | null;
   checkInRadius?: number;
   hasQuizChallenge?: boolean;
+  hasPhotoChallenge?: boolean;
   quizzes?: Quiz[];
 }
 
@@ -45,6 +46,7 @@ export function StationSitesList({ sites }: StationSitesListProps) {
             latitude={site.latitude}
             longitude={site.longitude}
             checkInRadius={site.checkInRadius}
+            hasPhotoChallenge={site.hasPhotoChallenge}
           />
           {site.hasQuizChallenge && site.quizzes && site.quizzes.length > 0 && (
             <QuizCard

@@ -17,6 +17,7 @@ interface AttractionRow {
   longitude: number | null;
   check_in_radius: number | null;
   has_quiz_challenge: boolean | null;
+  has_photo_challenge: boolean | null;
 }
 
 interface QuizRow {
@@ -37,7 +38,7 @@ export default async function StationPage({ params }: PageProps) {
     supabase.from('stations').select('name').eq('id', stationId).single(),
     supabase
       .from('attractions')
-      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius,has_quiz_challenge')
+      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius,has_quiz_challenge,has_photo_challenge')
       .eq('station_id', stationId)
       .eq('is_verified', true)
       .order('name', { ascending: true }),
@@ -91,6 +92,7 @@ export default async function StationPage({ params }: PageProps) {
     longitude: site.longitude ?? undefined,
     checkInRadius: site.check_in_radius ?? 300,
     hasQuizChallenge: site.has_quiz_challenge ?? false,
+    hasPhotoChallenge: site.has_photo_challenge ?? false,
     quizzes: quizzesByAttraction[site.id] ?? [],
   }));
 
