@@ -54,6 +54,22 @@ export default function AttractionCheckInCard({
 
   const hasLocationData = latitude !== undefined && longitude !== undefined;
 
+  const photoLockReason = useMemo(() => {
+    if (!session?.user?.id) {
+      return 'Sign in to enable photo verification.';
+    }
+
+    if (!hasLocationData || distance === null) {
+      return 'Refreshing your location before enabling photo capture.';
+    }
+
+    if (distance > checkInRadius) {
+      return `Move ${distance - checkInRadius}m closer to unlock the Take photo button.`;
+    }
+
+    return undefined;
+  }, [session, hasLocationData, distance, checkInRadius]);
+
   useEffect(() => {
     if (!hasLocationData) {
       setStatusMessage('This attraction does not have a check-in location.');
@@ -203,8 +219,6 @@ export default function AttractionCheckInCard({
         onGetDirections={() => {
           const directionUrl = googleMap ??
             `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
-
-          console.log(`Opening directions to ${name}: ${directionUrl}`);
           window.open(directionUrl, '_blank', 'noopener,noreferrer');
         }}
         showCheckInButton={false}
@@ -240,12 +254,14 @@ export default function AttractionCheckInCard({
             </button>
           </div>
 
-          {hasPhotoChallenge && coords && canCheckIn && (
+          {hasPhotoChallenge && coords && (
             <PhotoCaptureButton
               attractionId={id}
               attractionName={name}
               userLatitude={coords.latitude}
               userLongitude={coords.longitude}
+              canTakePhoto={canCheckIn}
+              lockReason={photoLockReason}
               onSuccess={() => {
                 setSuccessMessage('Photo verified! Check-in complete.');
                 setVisitCount(visitCount + 1);

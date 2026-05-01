@@ -12,6 +12,9 @@ interface VerifyPhotoRequest {
   base64Image: string;
   userLatitude: number;
   userLongitude: number;
+  capturedAt?: string | null;
+  imageDateTaken?: string | null;
+  captureSource?: 'camera' | 'upload';
 }
 
 interface GeminiResponse {
@@ -21,6 +24,8 @@ interface GeminiResponse {
 }
 
 const CONFIDENCE_THRESHOLD = 0.7;
+const NEAR_THRESHOLD = 0.6;
+const METADATA_MAX_AGE_HOURS = 24;
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +43,15 @@ export async function POST(request: NextRequest) {
 
     // Parse request body
     const body: VerifyPhotoRequest = await request.json();
-    const { attractionId, base64Image, userLatitude, userLongitude } = body;
+    const {
+      attractionId,
+      base64Image,
+      userLatitude,
+      userLongitude,
+      capturedAt,
+      imageDateTaken,
+      captureSource,
+    } = body;
 
     // Validation
     if (!attractionId || typeof attractionId !== 'string') {
@@ -115,12 +128,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const metadataWarning = buildMetadataWarning({
+      capturedAt,
+      imageDateTaken,
+    });
+
     // Call Gemini for landmark verification
     const geminiResult = await verifyLandmarkWithGemini(
       base64Image,
       attraction.name,
       attraction.ai_prompt
     );
+
+    const nearThreshold =
+      geminiResult.confidence >= NEAR_THRESHOLD && geminiResult.confidence < CONFIDENCE_THRESHOLD;
+
+    const hintText = nearThreshold
+      ? buildHintText({
+          attractionName: attraction.name,
+          aiPrompt: attraction.ai_prompt,
+          reason: geminiResult.reason,
+        })
+      : undefined;
 
     // Check confidence threshold
     if (!geminiResult.verified || geminiResult.confidence < CONFIDENCE_THRESHOLD) {
@@ -131,6 +160,11 @@ export async function POST(request: NextRequest) {
             geminiResult.confidence * 100
           ).toFixed(1)}%. ${geminiResult.reason || 'Could not verify landmark in photo.'}`,
           confidence: geminiResult.confidence,
+          reason: geminiResult.reason || 'Could not verify landmark in photo.',
+          nearThreshold,
+          hints: hintText,
+          metadataWarning,
+          captureSource: captureSource || 'upload',
         },
         { status: 422 }
       );
@@ -153,6 +187,10 @@ export async function POST(request: NextRequest) {
         message: `Check-in verified! ${attraction.name} unlocked.`,
         pointsAwarded: 8,
         confidence: geminiResult.confidence,
+        reason: geminiResult.reason,
+        nearThreshold: false,
+        metadataWarning,
+        captureSource: captureSource || 'upload',
       },
       { status: 200 }
     );
@@ -166,10 +204,7 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Verifies a landmark in the provided image using Gemini 1.5 Flash
- */
-/**
- * Verifies a landmark in the provided image using Gemini 2.5 Flash
+ * Verifies a landmark in the provided image using Gemini 3 Flash Preview
  */
 async function verifyLandmarkWithGemini(
   base64Image: string,
@@ -183,7 +218,7 @@ async function verifyLandmarkWithGemini(
   }
 
   const ai = new GoogleGenAI({ apiKey });
-  const modelId = 'gemini-2.5-flash';
+  const modelId = 'gemini-3-flash-preview';
 
   const promptText = customPrompt
     ? customPrompt.replace('{attraction_name}', attractionName)
@@ -255,4 +290,55 @@ async function verifyLandmarkWithGemini(
       reason: 'AI verification service error',
     };
   }
+}
+
+function buildMetadataWarning({
+  capturedAt,
+  imageDateTaken,
+}: {
+  capturedAt?: string | null;
+  imageDateTaken?: string | null;
+}): string | null {
+  const reference = imageDateTaken || capturedAt;
+
+  if (!reference) {
+    return null;
+  }
+
+  const parsedDate = new Date(reference);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return null;
+  }
+
+  const now = Date.now();
+  const ageHours = (now - parsedDate.getTime()) / (1000 * 60 * 60);
+
+  if (ageHours > METADATA_MAX_AGE_HOURS) {
+    return 'Photo metadata suggests this image may be old. For best results, capture a new photo now.';
+  }
+
+  if (ageHours < -1) {
+    return 'Photo metadata time appears ahead of current time. Check your device clock and retry.';
+  }
+
+  return null;
+}
+
+function buildHintText({
+  attractionName,
+  aiPrompt,
+  reason,
+}: {
+  attractionName: string;
+  aiPrompt?: string | null;
+  reason?: string;
+}): string {
+  const promptSummary = aiPrompt
+    ? aiPrompt.replace('{attraction_name}', attractionName).replace(/\s+/g, ' ').trim().slice(0, 180)
+    : `frame the most recognizable parts of ${attractionName}`;
+
+  const reasonText = reason ? ` Last result: ${reason}.` : '';
+
+  return `AI is looking for clear landmark features. Try to ${promptSummary}.${reasonText}`;
 }
