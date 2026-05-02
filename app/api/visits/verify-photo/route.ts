@@ -59,6 +59,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Require a geofence check-in before photo verification
+    const geofenceVisit = await prisma.visit.findFirst({
+      where: { userId, siteId: attractionId, verificationType: 'geofence' },
+      select: { id: true },
+    });
+
+    if (!geofenceVisit) {
+      return NextResponse.json(
+        { error: 'You must check in at this location before verifying a photo.' },
+        { status: 403 }
+      );
+    }
+
     if (!base64Image || typeof base64Image !== 'string') {
       return NextResponse.json(
         { error: 'Image data is required' },

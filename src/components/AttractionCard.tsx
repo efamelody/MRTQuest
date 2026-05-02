@@ -1,13 +1,11 @@
 'use client';
 
-import React from 'react';
-import { Navigation, Camera, CheckCircle2, RefreshCw, Star } from 'lucide-react';
+import React, { useState } from 'react';
+import { Navigation, Camera, CheckCircle2, RefreshCw, Star, BookOpen } from 'lucide-react';
 import StarRating from './StarRating';
 import PhotoCaptureButton from './PhotoCaptureButton';
-import QuizCard from './QuizCard';
 import { useAttractionVerification } from '@/utils/useAttractionVerification';
-import { useSession } from '@/utils/auth-client';
-import { createClient } from '@/utils/supabase/client';
+import { useRouter } from 'next/navigation';
 import type { Quiz } from '@/types/quiz';
 
 interface AttractionCardProps {
@@ -41,15 +39,19 @@ export default function AttractionCard({
   quizzes = [],
   onRate,
 }: AttractionCardProps) {
-  const { data: session } = useSession();
+  const [isPhotoOpen, setIsPhotoOpen] = useState(false);
+  const router = useRouter();
+
   const {
     currentPhase,
     distance,
     isLoadingLocation,
-    isVerified,
+    isCheckedIn,
+    isPhotoVerified,
     canCheckIn,
     refreshLocation,
-    setIsVerified,
+    setIsCheckedIn,
+    setIsPhotoVerified,
     coords,
   } = useAttractionVerification({
     attractionId: id,
@@ -73,17 +75,60 @@ export default function AttractionCard({
       );
     }
 
-    if (isVerified) {
+    if (isCheckedIn) {
       return (
-        <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in slide-in-from-bottom-2">
-          <CheckCircle2 className="w-8 h-8 text-emerald-600" />
-          <div>
-            <p className="font-bold text-emerald-800 text-sm">Visit Confirmed</p>
-            <p className="text-xs text-emerald-600">You've unlocked this site's challenges.</p>
+        <div className="space-y-4">
+          <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl">
+            <CheckCircle2 className="w-8 h-8 text-emerald-600 shrink-0" />
+            <div>
+              <p className="font-bold text-emerald-800 text-sm">Visit Confirmed</p>
+              <p className="text-xs text-emerald-600">You've earned your stamp for this stop.</p>
+            </div>
+            <button onClick={refreshLocation} className="ml-auto p-2 text-slate-400 hover:text-slate-600">
+              <RefreshCw className="w-4 h-4" />
+            </button>
           </div>
-          <button onClick={refreshLocation} className="ml-auto p-2 text-slate-400 hover:text-slate-600">
-            <RefreshCw className="w-4 h-4" />
-          </button>
+
+          {(hasPhotoChallenge || hasQuizChallenge) && (
+            <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 p-4 space-y-3">
+              <p className="text-[10px] uppercase tracking-widest font-bold text-amber-600">⭐ Bonus Challenges</p>
+
+              {hasPhotoChallenge && (
+                isPhotoVerified ? (
+                  <div className="w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 text-sm bg-emerald-100 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="w-4 h-4" /> Photo Verified — +8 pts
+                  </div>
+                ) : isPhotoOpen ? (
+                  <PhotoCaptureButton
+                    attractionId={id}
+                    attractionName={name}
+                    userLatitude={coords!.latitude}
+                    userLongitude={coords!.longitude}
+                    canTakePhoto={true}
+                    onSuccess={() => { setIsPhotoVerified(true); setIsPhotoOpen(false); }}
+                    onError={(err) => console.error(err)}
+                  />
+                ) : (
+                  <button
+                    onClick={() => setIsPhotoOpen(true)}
+                    className="w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 text-sm bg-linear-to-r from-amber-500 to-orange-500 text-white shadow-sm active:scale-95 transition"
+                  >
+                    <Camera className="w-5 h-5" /> Verify Landmark (+8 pts)
+                  </button>
+                )
+              )}
+
+              {hasQuizChallenge && (
+                <button
+                  onClick={() => router.push(`/quiz/${id}`)}
+                  className="w-full h-11 rounded-xl font-bold flex items-center justify-center gap-2 text-sm bg-violet-500 hover:bg-violet-600 text-white shadow-sm active:scale-95 transition"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  Start Quiz Challenge
+                </button>
+              )}
+            </div>
+          )}
         </div>
       );
     }
@@ -93,26 +138,21 @@ export default function AttractionCard({
         <div className="space-y-3 p-1">
           <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 px-1">You have arrived!</p>
           <div className="flex gap-2">
-            {hasPhotoChallenge ? (
-              <button
-                onClick={() => document.getElementById(`photo-btn-${id}`)?.click()}
-                className="flex-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white h-12 rounded-xl font-bold shadow-lg shadow-orange-200 flex items-center justify-center gap-2 active:scale-95 transition"
-              >
-                <Camera className="w-5 h-5" />
-                Verify Landmark
-              </button>
-            ) : (
-              <button
+            <button
                 onClick={async () => {
-                   const supabase = createClient();
-                   await supabase.from('visits').insert([{ user_id: session?.user?.id, site_id: id, verification_type: 'geofence' }]);
-                   setIsVerified(true);
+                  const res = await fetch('/api/visits/checkin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ attractionId: id }),
+                  });
+                  if (res.ok) {
+                    setIsCheckedIn(true);
+                  }
                 }}
                 className="flex-1 bg-primary text-white h-12 rounded-xl font-bold flex items-center justify-center gap-2"
               >
                 Check In Now
-              </button>
-            )}
+            </button>
             <button onClick={handleGetDirections} className="w-12 h-12 bg-slate-100 text-slate-600 rounded-xl flex items-center justify-center">
               <Navigation className="w-5 h-5" />
             </button>
@@ -170,37 +210,18 @@ export default function AttractionCard({
           {renderActionHub()}
         </div>
 
-        {/* 3. Discovery Zone (Locked Content) */}
-        {hasQuizChallenge && (
-          <div className={`transition-all duration-500 overflow-hidden ${isVerified ? 'max-h-[1000px] opacity-100 mt-4' : 'max-h-0 opacity-0'}`}>
-            <div className="pt-4 border-t-2 border-dashed border-slate-100">
-              <QuizCard attractionId={id} attractionName={name} quizzes={quizzes} hasQuizChallenge={hasQuizChallenge} />
-            </div>
-          </div>
-        )}
-
-        {!isVerified && hasQuizChallenge && (
+        {/* 3. Discovery Zone — quiz locked indicator */}
+        {!isCheckedIn && hasQuizChallenge && (
            <div className="flex items-center justify-center gap-2 py-2 text-slate-300">
-             <div className="h-[1px] flex-1 bg-slate-100" />
+             <div className="h-px flex-1 bg-slate-100" />
              <span className="text-[10px] font-bold uppercase tracking-widest">🔒 Quiz Locked</span>
-             <div className="h-[1px] flex-1 bg-slate-100" />
+             <div className="h-px flex-1 bg-slate-100" />
            </div>
         )}
       </div>
 
       {/* Hidden Functional Trigger */}
       <div className="hidden">
-        {coords && (
-          <PhotoCaptureButton
-            attractionId={id}
-            attractionName={name}
-            userLatitude={coords.latitude}
-            userLongitude={coords.longitude}
-            canTakePhoto={canCheckIn}
-            onSuccess={() => setIsVerified(true)}
-            onError={(err) => console.error(err)}
-          />
-        )}
         <button id={`photo-btn-${id}`} />
       </div>
     </div>

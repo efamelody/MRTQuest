@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { getDistance } from 'geolib';
 import { useSession } from '@/utils/auth-client';
 
-export type VerificationPhase = 'outside' | 'inside' | 'verified';
+export type VerificationPhase = 'outside' | 'inside' | 'checked-in';
 
 interface UseAttractionVerificationProps {
   attractionId: string;
@@ -17,12 +17,14 @@ interface UseAttractionVerificationReturn {
   currentPhase: VerificationPhase;
   distance: number | null;
   isLoadingLocation: boolean;
-  isVerified: boolean;
+  isCheckedIn: boolean;
+  isPhotoVerified: boolean;
   canCheckIn: boolean;
   statusMessage: string;
   error: string | null;
   refreshLocation: () => void;
-  setIsVerified: (verified: boolean) => void;
+  setIsCheckedIn: (value: boolean) => void;
+  setIsPhotoVerified: (value: boolean) => void;
   coords: GeolocationCoordinates | null;
 }
 
@@ -37,7 +39,8 @@ export function useAttractionVerification({
   const [distance, setDistance] = useState<number | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isVerified, setIsVerified] = useState(false);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [isPhotoVerified, setIsPhotoVerified] = useState(false);
   const [isCheckingVerificationStatus, setIsCheckingVerificationStatus] = useState(true);
 
   const hasLocationData = latitude !== undefined && longitude !== undefined;
@@ -59,7 +62,8 @@ export function useAttractionVerification({
 
         if (response.ok) {
           const data = await response.json();
-          setIsVerified(data.isVerified || false);
+          setIsCheckedIn(data.isCheckedIn || false);
+          setIsPhotoVerified(data.isPhotoVerified || false);
         }
       } catch (err) {
         console.error('Failed to check verification status:', err);
@@ -136,17 +140,17 @@ export function useAttractionVerification({
       longitude !== undefined &&
       distance !== null &&
       distance <= checkInRadius &&
-      !isVerified
+      !isCheckedIn
     );
-  }, [session, latitude, longitude, distance, checkInRadius, isVerified]);
+  }, [session, latitude, longitude, distance, checkInRadius, isCheckedIn]);
 
   // Determine current phase
   const currentPhase = useMemo(() => {
-    if (isVerified) return 'verified';
+    if (isCheckedIn) return 'checked-in';
     if (!hasLocationData || distance === null) return 'outside';
     if (distance <= checkInRadius) return 'inside';
     return 'outside';
-  }, [isVerified, hasLocationData, distance, checkInRadius]);
+  }, [isCheckedIn, hasLocationData, distance, checkInRadius]);
 
   // Generate status message
   const statusMessage = useMemo(() => {
@@ -154,11 +158,11 @@ export function useAttractionVerification({
     if (!hasLocationData) return 'Attraction location data is unavailable.';
     if (isLoadingLocation || isCheckingVerificationStatus) return 'Loading your location...';
     if (error) return error;
-    if (isVerified) return 'Visit verified! Well done.';
+    if (isCheckedIn) return 'Checked in! Complete bonus challenges below.';
     if (distance === null) return 'Getting your location...';
     if (distance <= checkInRadius) return `Within ${checkInRadius}m. Ready to check in.`;
     return `You are ${distance}m away. Move closer to check in.`;
-  }, [session, hasLocationData, isLoadingLocation, isCheckingVerificationStatus, error, isVerified, distance, checkInRadius]);
+  }, [session, hasLocationData, isLoadingLocation, isCheckingVerificationStatus, error, isCheckedIn, distance, checkInRadius]);
 
   const refreshLocation = () => {
     if (!navigator?.geolocation) {
@@ -190,12 +194,14 @@ export function useAttractionVerification({
     currentPhase,
     distance,
     isLoadingLocation: isLoadingLocation || isCheckingVerificationStatus,
-    isVerified,
+    isCheckedIn,
+    isPhotoVerified,
     canCheckIn,
     statusMessage,
     error,
     refreshLocation,
-    setIsVerified,
+    setIsCheckedIn,
+    setIsPhotoVerified,
     coords,
   };
 }

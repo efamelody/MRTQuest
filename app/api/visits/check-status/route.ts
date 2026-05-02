@@ -15,21 +15,21 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Missing attractionId' }, { status: 400 });
     }
 
-    // Check if user has a verified visit for this attraction
-    const visit = await prisma.visit.findFirst({
-      where: {
-        userId: session.user.id,
-        siteId: attractionId,
-        verifiedAt: { not: null },
-      },
-      select: {
-        id: true,
-      },
-    });
+    // Check geofence and photo visits separately
+    const [geofenceVisit, photoVisit] = await Promise.all([
+      prisma.visit.findFirst({
+        where: { userId: session.user.id, siteId: attractionId, verificationType: 'geofence' },
+        select: { id: true },
+      }),
+      prisma.visit.findFirst({
+        where: { userId: session.user.id, siteId: attractionId, verificationType: 'photo' },
+        select: { id: true },
+      }),
+    ]);
 
     return Response.json({
-      isVerified: !!visit,
-      visitId: visit?.id,
+      isCheckedIn: !!geofenceVisit,
+      isPhotoVerified: !!photoVisit,
     });
   } catch (error) {
     console.error('[check-status] Error:', error);

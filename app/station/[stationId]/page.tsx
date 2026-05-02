@@ -1,6 +1,6 @@
 import { ArrowLeft, MapPin, Map } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/server';
 import { StationSitesList } from '@/components/StationSitesList';
 
 interface PageProps {
@@ -32,7 +32,7 @@ interface QuizRow {
 
 export default async function StationPage({ params }: PageProps) {
   const { stationId } = await params;
-  const supabase = createClient();
+  const supabase = createServiceClient();
 
   const [{ data: stationData }, { data: siteData }, { data: quizData }] = await Promise.all([
     supabase.from('stations').select('name').eq('id', stationId).single(),

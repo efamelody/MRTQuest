@@ -10,6 +10,7 @@ interface QuizCardProps {
   attractionName: string;
   quizzes: Quiz[] | undefined;
   hasQuizChallenge: boolean;
+  onClose?: () => void;
 }
 
 interface QuizResult {
@@ -34,6 +35,7 @@ export default function QuizCard({
   attractionName,
   quizzes,
   hasQuizChallenge,
+  onClose,
 }: QuizCardProps) {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -141,14 +143,24 @@ export default function QuizCard({
           ))}
         </div>
 
-        <Button
-          variant="primary"
-          fullWidth
-          onClick={handleTryAgain}
-          className="mb-2"
-        >
-          Try Again
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            variant="primary"
+            fullWidth
+            onClick={handleTryAgain}
+          >
+            Try Again
+          </Button>
+          {onClose && (
+            <Button
+              variant="secondary"
+              fullWidth
+              onClick={onClose}
+            >
+              Done
+            </Button>
+          )}
+        </div>
       </div>
     );
   }

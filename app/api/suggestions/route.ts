@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { createServiceClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -28,21 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase client
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return [];
-          },
-          setAll() {
-            // No-op for server-side requests
-          },
-        },
-      }
-    );
+    const supabase = createServiceClient();
 
     // Insert into attractions table
     const { data, error } = await supabase
