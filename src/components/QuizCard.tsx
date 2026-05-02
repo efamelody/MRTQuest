@@ -3,21 +3,12 @@
 import { useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import Button from '@/components/Button';
-import Card from '@/components/Card';
-
-interface Quiz {
-  id: string;
-  question: string;
-  correctAnswer: string;
-  options: string[];
-  points: number | null;
-  sortOrder?: number;
-}
+import type { Quiz } from '@/types/quiz';
 
 interface QuizCardProps {
   attractionId: string;
   attractionName: string;
-  quizzes: Quiz[];
+  quizzes: Quiz[] | undefined;
   hasQuizChallenge: boolean;
 }
 
@@ -50,7 +41,7 @@ export default function QuizCard({
   const [submissionResults, setSubmissionResults] = useState<SubmitResponse | null>(null);
 
   // Don't render if quiz challenge is not enabled or no quizzes
-  if (!hasQuizChallenge || quizzes.length === 0) {
+  if (!hasQuizChallenge || !quizzes || quizzes.length === 0) {
     return null;
   }
 

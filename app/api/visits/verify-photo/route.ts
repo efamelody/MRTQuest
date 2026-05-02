@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/utils/prisma';
 import { getDistance } from 'geolib';
 import { GoogleGenAI } from '@google/genai';
-
-const prisma = new PrismaClient();
 
 
 interface VerifyPhotoRequest {

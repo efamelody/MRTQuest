@@ -26,6 +26,7 @@ export function TabBar() {
             <button
               key={tab.href}
               onClick={() => router.push(tab.href)}
+              suppressHydrationWarning
               className={`flex flex-col items-center justify-center h-20 transition-all ${
                 isActive
                   ? 'text-primary scale-110'
