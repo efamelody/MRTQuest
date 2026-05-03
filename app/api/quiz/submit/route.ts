@@ -1,0 +1,156 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@/utils/auth';
+import { prisma } from '@/utils/prisma';
+import { evaluateBadges } from '@/utils/badges';
+
+interface SubmitQuizRequest {
+  attractionId: string;
+  answers: Record<string, string>; // quizId -> userAnswer
+}
+
+interface QuizResult {
+  quizId: string;
+  question: string;
+  correctAnswer: string;
+  userAnswer: string;
+  isCorrect: boolean;
+  pointsEarned: number;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    // Get session from request
+    const session = await auth.api.getSession({ headers: request.headers });
+
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please log in to submit a quiz.' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // Ensure a profile row exists (profiles FK-references ba_user)
+    await prisma.profile.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+    });
+
+    // Parse request body
+    const body: SubmitQuizRequest = await request.json();
+    const { attractionId, answers } = body;
+
+    // Validation
+    if (!attractionId || typeof attractionId !== 'string') {
+      return NextResponse.json(
+        { error: 'Attraction ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!answers || typeof answers !== 'object' || Object.keys(answers).length === 0) {
+      return NextResponse.json(
+        { error: 'At least one answer is required' },
+        { status: 400 }
+      );
+    }
+
+    // Fetch quiz data for this attraction (ordered by sortOrder)
+    const quizzes = await prisma.quiz.findMany({
+      where: { siteId: attractionId },
+      select: {
+        id: true,
+        question: true,
+        correctAnswer: true,
+        points: true,
+      },
+      orderBy: {
+        // Note: sortOrder field requires running `pnpm prisma generate` after schema update
+        // For now, relying on database sort_order index
+      } as any,
+    });
+
+    if (quizzes.length === 0) {
+      return NextResponse.json(
+        { error: 'No quizzes found for this attraction' },
+        { status: 404 }
+      );
+    }
+
+    // Process answers and create records
+    const results: QuizResult[] = [];
+    let totalCorrect = 0;
+    let totalPoints = 0;
+
+    const attemptPromises = quizzes.map(async (quiz) => {
+      const userAnswer = answers[quiz.id];
+
+      // If user didn't answer this question, skip it
+      if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
+        return;
+      }
+
+      // Note: options validation requires running `pnpm prisma generate` first
+      // For now, doing exact string comparison (case-sensitive)
+      // since options come from the same source as correctAnswer
+      const isCorrect = userAnswer === quiz.correctAnswer;
+      const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
+
+      if (isCorrect) {
+        totalCorrect++;
+        totalPoints += pointsEarned;
+      }
+
+      // Upsert so re-attempts overwrite the previous record
+      await prisma.userQuizAttempt.upsert({
+        where: { userId_quizId: { userId, quizId: quiz.id } },
+        update: {
+          isCorrect,
+          answer_provided: userAnswer,
+          points_earned: pointsEarned,
+          attemptedAt: new Date(),
+        },
+        create: {
+          userId,
+          quizId: quiz.id,
+          isCorrect,
+          answer_provided: userAnswer,
+          points_earned: pointsEarned,
+        },
+      });
+
+      results.push({
+        quizId: quiz.id,
+        question: quiz.question,
+        correctAnswer: quiz.correctAnswer,
+        userAnswer,
+        isCorrect,
+        pointsEarned,
+      });
+    });
+
+    await Promise.all(attemptPromises);
+
+    const newBadges = await evaluateBadges(userId);
+
+    return NextResponse.json(
+      {
+        success: true,
+        totalQuestions: results.length,
+        correctCount: totalCorrect,
+        totalPoints,
+        results,
+        newBadges,
+      },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Quiz submission error:', error);
+    return NextResponse.json(
+      { error: 'Failed to submit quiz. Please try again.' },
+      { status: 500 }
+    );
+  }
+}

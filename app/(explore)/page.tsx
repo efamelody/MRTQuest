@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { MRTMap } from '@/components/MRTMap';
 import { SuggestionForm } from '@/components/SuggestionForm';
 import { Lightbulb, PlusCircle } from 'lucide-react';
@@ -19,6 +18,8 @@ type Station = {
   id: string;
   name: string;
   active: boolean;
+  line: string;
+  sequenceOrder: number | null;
 };
 
 const lineMeta: Record<LineId, { label: string; colorClass: string; accentClass: string }> = {
@@ -34,8 +35,6 @@ const lineMeta: Record<LineId, { label: string; colorClass: string; accentClass:
   },
 };
 
-const supabase = createClient();
-
 export default function ExplorePage() {
   const [activeLine, setActiveLine] = useState<LineId>('kajang');
   const [stations, setStations] = useState<Station[]>([]);
@@ -49,17 +48,21 @@ export default function ExplorePage() {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('stations')
-        .select('id,name,sequence_order,active')
-        .eq('line', activeLineMeta.label)
-        .order('sequence_order', { ascending: true });
-
-      if (fetchError) {
-        setError(fetchError.message);
+      try {
+        const response = await fetch('/api/stations');
+        if (!response.ok) throw new Error('Failed to fetch stations');
+        const data = await response.json();
+        
+        // Filter by active line and sort
+        const lineLabel = lineMeta[activeLine].label;
+        const filtered = (data.stations ?? [])
+          .filter((s: Station) => s.line === lineLabel)
+          .sort((a: Station, b: Station) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
+        
+        setStations(filtered);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Unknown error');
         setStations([]);
-      } else {
-        setStations(data ?? []);
       }
 
       setIsLoading(false);

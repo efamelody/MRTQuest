@@ -2,79 +2,143 @@
 
 ## Overview
 
-MRTQuest is a Next.js 15 App Router application backed by Supabase (Postgres). The app is serverless and mobile-first. There is no custom backend — all data access goes directly through the Supabase client libraries.
+MRTQuest is a Next.js 15 App Router application with:
+
+- **Authentication:** Better Auth (manages sessions via `ba_user`, `ba_session` in Postgres)
+- **Database:** Supabase PostgreSQL accessed via **Prisma ORM** for mutations + **Supabase client** for reference data reads
+- **Deployment:** Serverless, mobile-first design with sticky header and fixed tab bar
+
+> **Current State:** Partial migration from Supabase Auth to Better Auth + Prisma. Pages still fetch reference tables (stations, attractions, quizzes) via Supabase; mutations (visits, quiz attempts, badges) use Prisma.
 
 ---
 
-## Supabase Table Relationships
+## Database Schema & Relationships
+
+### Better Auth Tables (Auto-Managed)
+
+Better Auth automatically creates and manages these Prisma models:
 
 ```
-auth.users
-    │
-    └─── profiles (1:1)
-              │
-              ├─── visits (1:many) ──────────────────┐
-              ├─── reviews (1:many) ─────────────────┤
-              ├─── user_quiz_attempts (1:many) ───────┤
-              └─── user_badges (1:many)               │
-                                                      │
-stations (1:many)                                     │
-    │                                                 │
-    └─── attractions (1:many) ◄────────────────────── ┘
-              │
-              ├─── reviews (1:many)
-              ├─── visits (1:many)
-              └─── quizzes (1:many)
-                        │
-                        └─── user_quiz_attempts (1:many)
+User (ba_user)
+  id, email, name, image, createdAt, updatedAt
+  ├── Account (ba_account)          [OAuth provider link]
+  ├── Session (ba_session)          [Session tokens]
+  └── Profile (1:1 FK on profiles.id)
+        ├── Visit (1:many)
+        ├── Review (1:many)
+        ├── UserBadge (1:many)
+        └── UserQuizAttempt (1:many)
 
-badges ──── user_badges (many:1)
-  │
-  └─── stations (optional FK — station-specific badges)
+Verification (ba_verification)     [Email verification OTPs]
+```
+
+### MRTQuest Application Models
+
+```
+Station
+  id, name, line, latitude, longitude, active
+  ├── Attraction (1:many)
+  │     ├── Review (1:many)           [User rating + comment]
+  │     ├── Visit (1:many)            [Check-in log]
+  │     ├── Quiz (1:many)             [Quiz questions]
+  │     │     └── UserQuizAttempt (1:many) [Quiz submission + score]
+  │     └── Badge (optional FK)
+  └── Badge (optional, station-specific badge)
+
+Badge
+  id, name, criteria_type, criteria_value, station_id
+  └── UserBadge (1:many)  [Badge earned by user]
 ```
 
 ### Table Purposes
 
-| Table | Role |
-|---|---|
-| `auth.users` | Supabase-managed identity store. Never queried directly — use `profiles`. |
-| `profiles` | Public user data (`username`, `avatar_url`). Row created on signup. |
-| `stations` | MRT stations. `active` flag controls whether a station is visible in the UI. |
-| `attractions` | Points of interest per station. `is_verified` flag gates community suggestions. |
-| `reviews` | Star rating (1–5) + optional comment per user per attraction. |
-| `visits` | Immutable check-in log: one row per user visit to an attraction. |
-| `quizzes` | One question + correct answer per attraction. |
-| `user_quiz_attempts` | Records each quiz attempt with an `is_correct` boolean. |
-| `badges` | Badge definitions: `criteria_type`, `criteria_value`, `criter_target`. |
-| `user_badges` | Join table: which user earned which badge, and when. |
+| Table | Prisma Model | Purpose | Layer |
+|---|---|---|---|
+| `ba_user` | `User` | Better Auth user identity (email, OAuth). Primary key for sessions. | Auth |
+| `ba_session` | `Session` | Session tokens. One per login. | Auth |
+| `ba_account` | `Account` | OAuth provider accounts (Google, etc.). | Auth |
+| `ba_verification` | `Verification` | Email verification OTPs. | Auth |
+| `profiles` | `Profile` | App-specific user data (`username`, `avatar_url`). FK → `ba_user.id`. | Data |
+| `stations` | `Station` | MRT stations on Kajang/Putrajaya lines. `active` flag gates visibility. | Reference |
+| `attractions` | `Attraction` | Points of interest per station. Links to quizzes, reviews, visits. | Reference |
+| `visits` | `Visit` | Immutable check-in log: `(user_id, site_id, verification_type)`. | User Data |
+| `reviews` | `Review` | User rating (1–5) + optional comment per attraction. | User Data |
+| `quizzes` | `Quiz` | Quiz question + correct answer per attraction. | Reference |
+| `user_quiz_attempts` | `UserQuizAttempt` | Quiz submission: `(user_id, quiz_id, is_correct, points_earned)`. | User Data |
+| `badges` | `Badge` | Badge definitions with unlock criteria (`criteria_type`, `criteria_value`, `criteria_target`). | Reference |
+| `user_badges` | `UserBadge` | Which badges each user has earned. | User Data |
 
 ---
 
-## Next.js Server Components Data Flow
+## Prisma Client Setup
+
+### Initialization ([src/utils/prisma.ts](src/utils/prisma.ts))
+
+**Singleton pattern** prevents hot-reload connection leaks in development:
+
+```ts
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
+
+export const prisma =
+  globalForPrisma.prisma ||
+  new PrismaClient({
+    log: ['warn', 'error'],
+    errorFormat: 'pretty',  // dev only
+  });
+```
+
+**Database connection:**
+- `DATABASE_URL` = Supabase Postgres with connection pooling (PgBouncer)
+- `DIRECT_URL` = Direct connection for migrations (no pooling)
+- Prisma automatically uses `DATABASE_URL` at runtime, `DIRECT_URL` for `prisma migrate`
+
+### Better Auth Adapter
+
+[src/utils/auth.ts](src/utils/auth.ts) configures Prisma as the database:
+
+```ts
+export const auth = betterAuth({
+  database: prismaAdapter(prisma, { provider: "postgresql" }),
+  emailAndPassword: { enabled: true },
+  secret: process.env.BETTER_AUTH_SECRET,
+  baseURL: process.env.BETTER_AUTH_URL,
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    },
+  },
+});
+```
+
+---
+
+## Next.js Server Components & API Route Data Flow
 
 ```
 Browser
   │
   │  HTTP GET /station/[stationId]
   ▼
-Next.js Edge / Node runtime
+Next.js Node runtime (Server Component)
   │
-  ├── app/station/[stationId]/page.tsx   (async Server Component)
+  ├── app/station/[stationId]/page.tsx   (async, no 'use client')
   │     │
-  │     ├── createClient()               ← src/utils/supabase/server.ts
-  │     │     └── createServerClient()   ← @supabase/ssr (no cookie persistence yet)
+  │     ├── const supabase = createClient()  ← src/utils/supabase/server.ts
   │     │
   │     ├── Promise.all([
   │     │     supabase.from('stations').select('name').eq('id', stationId).single(),
-  │     │     supabase.from('attractions').select('id,name,description,image_url,google_map')
-  │     │                                .eq('station_id', stationId).order('name')
-  │     │   ])
+  │     │     supabase.from('attractions').select('id,name,...')
+  │     │       .eq('station_id', stationId).order('name')
+  │     │   ])  ← Fetch reference data only (not mutations)
   │     │
-  │     └── <StationSitesList sites={attractions} />   (Server Component)
-  │           └── <AttractionCard />                   (Server Component, no state)
+  │     └── <StationSitesList sites={attractions} />
+  │           └── <AttractionCard />        (Server Component, no state)
   │
-  └── Rendered HTML streamed to browser (zero JS for static parts)
+  └── Rendered HTML streamed to browser (zero JS for static content)
 ```
+
+**Note:** Reference data (stations, attractions, quizzes) is still fetched via Supabase client to avoid N+1 queries. User data (visits, reviews) is fetched via Prisma in API routes.
 
 ### Client Component Islands
 
@@ -83,41 +147,86 @@ Components that opt into the browser runtime with `'use client'`:
 | Component | Why it needs the browser |
 |---|---|
 | `TabBar` | `usePathname()` to highlight the active tab |
-| `explore/page.tsx` | `useState` for active line toggle + modal open state |
-| `badge/page.tsx` | `useState` for category filter + fetching badges on mount |
-| `SuggestionForm` | Form state, POST to `/api/suggestions`, success/error feedback |
+| `explore/page.tsx` | `useState` for active line toggle + modal open state; calls `useSession()` to check auth |
+| `badge/page.tsx` | `useState` for category filter; `useSession()` to fetch user's earned badges |
+| `SuggestionForm` | Form state; POST to `/api/suggestions`; success/error feedback |
 | `MRTMap` | Router push on station click |
-| `RatingModal` | Controlled star rating + comment state |
+| `RatingModal` | Controlled star rating + comment state; POST to `/api/reviews` |
+| `PassportPage` | `useSession()` to display user profile; `signOut()` handler |
 
 ---
 
-## API Route Flow
+## API Route Authentication & Mutation Pattern
+
+### Typical Flow: Check-in Request
 
 ```
-Browser
+Browser (Client Component)
   │
-  │  POST /api/suggestions  { name, description, stationId }
+  │  POST /api/visits/checkin  { attractionId }
   ▼
-app/api/suggestions/route.ts   (Next.js Route Handler — runs on server)
+app/api/visits/checkin/route.ts
   │
-  ├── Validate request body (name, description, stationId required)
+  ├── const session = await auth.api.getSession({ headers })  ← Extract user
+  │     └── Throws 401 if missing
   │
-  ├── createServerClient()     ← @supabase/ssr (stateless, no cookies)
+  ├── const userId = session.user.id
   │
-  ├── supabase.from('attractions').insert({ ..., is_verified: false })
+  ├── Ensure profile exists:
+  │     await prisma.profile.upsert({
+  │       where: { id: userId },
+  │       create: { id: userId },  ← FK links to ba_user.id
+  │     })
   │
-  └── NextResponse.json({ message, data })  or  { error }  + status code
+  ├── Check for duplicate visits (prevent double check-ins):
+  │     const existing = await prisma.visit.findFirst({
+  │       where: { userId, siteId: attractionId }
+  │     })
+  │
+  ├── Create visit record:
+  │     const visit = await prisma.visit.create({
+  │       data: { userId, siteId: attractionId, verificationType: 'geofence' }
+  │     })
+  │
+  ├── Evaluate badges (async, not awaited for speed):
+  │     const newBadges = await evaluateBadges(userId)
+  │
+  └── NextResponse.json({ visitId, newBadges })
 ```
+
+[Full example: app/api/visits/checkin/route.ts](app/api/visits/checkin/route.ts)
 
 ---
 
-## Supabase Client Selection Rule
+## Client Selection & Import Rules
 
-| Runtime context | File to import from |
-|---|---|
-| `'use client'` component | `src/utils/supabase/client.ts` → `createBrowserClient` |
-| `async` Server Component | `src/utils/supabase/server.ts` → `createServerClient` |
-| Route Handler (`app/api/`) | `src/utils/supabase/server.ts` → `createServerClient` |
-| `middleware.ts` | `src/utils/supabase/middleware.ts` (when auth is wired up) |
+### For Authentication
 
-> **Never** import the server client in a Client Component — it will throw at runtime because `next/headers` is not available in the browser bundle.
+| Context | Import | Purpose |
+|---|---|---|
+| **Server Component** (fetch user in page) | `import { auth } from '@/utils/auth'` | Get session: `await auth.api.getSession({ headers: request.headers })` |
+| **Client Component** | `import { useSession } from '@/utils/auth-client'` | Hook: `const { data: session } = useSession()` |
+| **API Route Handler** | `import { auth } from '@/utils/auth'` | Extract session: same as Server Component |
+
+### For Data Access
+
+| Context | Import | Use Case |
+|---|---|---|
+| **Server Component (reads only)** | `import { createClient } from '@/utils/supabase/server'` | Fetch reference tables (stations, attractions, quizzes) |
+| **Client Component** | `import { createClient } from '@/utils/supabase/client'` | Browser-side reads only (no mutations) |
+| **API Route (mutations)** | `import { prisma } from '@/utils/prisma'` | Create visits, quiz attempts, badges |
+| **API Route (complex reads)** | `import { prisma } from '@/utils/prisma'` | Complex queries with user data |
+
+### Prisma Import
+
+```ts
+// Available in all contexts (server-only)
+import { prisma } from '@/utils/prisma';
+
+// Common patterns:
+await prisma.visit.create({ data: { userId, siteId } });
+await prisma.userBadge.findMany({ where: { userId } });
+await prisma.profile.upsert({ where: { id }, create: { id }, update: {} });
+```
+
+> **Never** import Prisma in Client Components. Prisma client is server-only.

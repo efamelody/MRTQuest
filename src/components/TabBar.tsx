@@ -8,7 +8,7 @@ export function TabBar() {
   const router = useRouter();
 
   const tabs = [
-    { href: '/explore', label: 'Explore', icon: TrainFront },
+    { href: '/', label: 'Explore', icon: TrainFront },
     { href: '/badge', label: 'Badge', icon: Stamp },
     { href: '/passport', label: 'Passport', icon: Album },
   ];
@@ -26,6 +26,7 @@ export function TabBar() {
             <button
               key={tab.href}
               onClick={() => router.push(tab.href)}
+              suppressHydrationWarning
               className={`flex flex-col items-center justify-center h-20 transition-all ${
                 isActive
                   ? 'text-primary scale-110'

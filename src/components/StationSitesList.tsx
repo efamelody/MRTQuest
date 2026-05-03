@@ -1,6 +1,7 @@
 'use client';
 
-import Card from '@/components/Card';
+import AttractionCard from './AttractionCard';
+import type { Quiz } from '@/types/quiz';
 
 interface SiteData {
   id: string;
@@ -9,6 +10,13 @@ interface SiteData {
   image?: string;
   rating?: number;
   googleMap?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  checkInRadius?: number;
+  hasQuizChallenge?: boolean;
+  hasPhotoChallenge?: boolean;
+  photoPrompt?: string;
+  quizzes?: Quiz[];
 }
 
 interface StationSitesListProps {
@@ -17,25 +25,23 @@ interface StationSitesListProps {
 
 export function StationSitesList({ sites }: StationSitesListProps) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {sites.map((site) => (
-        <Card
+        <AttractionCard
           key={site.id}
-          {...site}
-          onCheckIn={() => {
-            console.log(`Checked in at ${site.name}`);
-            // TODO: integrate with Supabase
-          }}
-          onGetDirections={() => {
-            const directionUrl = site.googleMap ??
-              `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(site.name)}`;
-
-            console.log(`Opening directions to ${site.name}: ${directionUrl}`);
-            window.open(directionUrl, '_blank', 'noopener,noreferrer');
-          }}
-          onCardClick={() => {
-            console.log(`Viewing details for ${site.name}`);
-          }}
+          id={site.id}
+          name={site.name}
+          description={site.description}
+          image={site.image}
+          rating={site.rating}
+          googleMap={site.googleMap}
+          latitude={site.latitude}
+          longitude={site.longitude}
+          checkInRadius={site.checkInRadius}
+          hasPhotoChallenge={site.hasPhotoChallenge}
+          hasQuizChallenge={site.hasQuizChallenge}
+          photoPrompt={site.photoPrompt}
+          quizzes={site.quizzes}
         />
       ))}
     </div>

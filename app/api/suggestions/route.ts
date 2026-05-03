@@ -1,4 +1,4 @@
-import { createServerClient } from "@supabase/ssr";
+import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -28,50 +28,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create Supabase client
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return [];
-          },
-          setAll() {
-            // No-op for server-side requests
-          },
-        },
-      }
-    );
-
-    // Insert into attractions table
-    const { data, error } = await supabase
-      .from("attractions")
-      .insert({
+    // Create attraction using Prisma (not verified by default)
+    const attraction = await prisma.attraction.create({
+      data: {
         name: name.trim(),
         description: description.trim(),
-        station_id: stationId,
-        is_verified: false,
-      })
-      .select();
-
-    if (error) {
-      console.error('Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to submit suggestion' },
-        { status: 500 }
-      );
-    }
+        stationId,
+        isVerified: false,  // Community suggestions start unverified
+        verificationType: 'quiz',  // Default verification type
+      },
+    });
 
     return NextResponse.json({
       message: 'Suggestion submitted successfully',
-      data,
+      data: attraction,
     });
   } catch (error) {
-    console.error('API error:', error);
+    console.error('[/api/suggestions] Error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+

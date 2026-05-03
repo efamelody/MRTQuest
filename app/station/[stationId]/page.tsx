@@ -1,34 +1,56 @@
 import { ArrowLeft, MapPin, Map } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { StationSitesList } from '@/components/StationSitesList';
 
 interface PageProps {
   params: Promise<{ stationId: string }>;
 }
 
-interface AttractionRow {
-  id: string;
-  name: string;
-  description: string | null;
-  image_url: string | null;
-  google_map: string | null;
-}
-
 export default async function StationPage({ params }: PageProps) {
   const { stationId } = await params;
-  const supabase = createClient();
 
-  const [{ data: stationData }, { data: siteData }] = await Promise.all([
-    supabase.from('stations').select('name').eq('id', stationId).single(),
-    supabase
-      .from('attractions')
-      .select('id,name,description,image_url,google_map')
-      .eq('station_id', stationId)
-      .order('name', { ascending: true }),
+  // Fetch station, attractions, and quizzes in parallel using Prisma
+  const [station, attractions, quizzes] = await Promise.all([
+    prisma.station.findUnique({
+      where: { id: stationId },
+      select: { name: true },
+    }),
+    prisma.attraction.findMany({
+      where: {
+        stationId,
+        isVerified: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageUrl: true,
+        googleMap: true,
+        latitude: true,
+        longitude: true,
+        checkInRadius: true,
+        has_quiz_challenge: true,
+        has_photo_challenge: true,
+        ai_prompt: true,
+      },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.quiz.findMany({
+      select: {
+        id: true,
+        siteId: true,
+        question: true,
+        correctAnswer: true,
+        options: true,
+        sortOrder: true,
+        points: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    }),
   ]);
 
-  const stationName = stationData?.name ??
+  const stationName = station?.name ??
     (stationId
       ? stationId
           .split('-')
@@ -36,12 +58,45 @@ export default async function StationPage({ params }: PageProps) {
           .join(' ')
       : 'Unknown Station');
 
-  const attractions = (siteData ?? []).map((site: AttractionRow) => ({
+  // Group quizzes by siteId for easy lookup
+  const quizzesByAttraction = quizzes.reduce(
+    (acc, quiz) => {
+      if (!acc[quiz.siteId]) {
+        acc[quiz.siteId] = [];
+      }
+      acc[quiz.siteId].push({
+        id: quiz.id,
+        question: quiz.question,
+        correctAnswer: quiz.correctAnswer,
+        options: quiz.options || [],
+        sortOrder: quiz.sortOrder || 0,
+        points: quiz.points,
+      });
+      return acc;
+    },
+    {} as Record<string, Array<{
+      id: string;
+      question: string;
+      correctAnswer: string;
+      options: string[];
+      sortOrder: number;
+      points: number | null;
+    }>>
+  );
+
+  const attractionsList = attractions.map((site) => ({
     id: site.id,
     name: site.name,
     description: site.description ?? 'No description available.',
-    image: site.image_url ?? undefined,
-    googleMap: site.google_map ?? undefined,
+    image: site.imageUrl ?? undefined,
+    googleMap: site.googleMap ?? undefined,
+    latitude: site.latitude ?? undefined,
+    longitude: site.longitude ?? undefined,
+    checkInRadius: site.checkInRadius ?? 300,
+    hasQuizChallenge: site.has_quiz_challenge ?? false,
+    hasPhotoChallenge: site.has_photo_challenge ?? false,
+    photoPrompt: site.ai_prompt ?? undefined,
+    quizzes: quizzesByAttraction[site.id] ?? [],
   }));
 
   return (
@@ -49,7 +104,7 @@ export default async function StationPage({ params }: PageProps) {
       {/* Header */}
       <div className="bg-white/70 backdrop-blur-sm border-b-2 border-white px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
         <Link
-          href="/explore"
+          href="/"
           className="flex items-center gap-2 text-slate-700 hover:text-primary transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -74,9 +129,9 @@ export default async function StationPage({ params }: PageProps) {
           </div>
         </div>
 
-        <StationSitesList sites={attractions} />
+        <StationSitesList sites={attractionsList} />
 
-        {attractions.length === 0 && (
+        {attractionsList.length === 0 && (
           <div className="text-center py-12">
             <Map className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600">No attractions found nearby</p>
