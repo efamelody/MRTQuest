@@ -1,23 +1,21 @@
 # MRTQuest
 
-> Discover hidden gems, heritage sites, and local culture along Kuala Lumpur's MRT lines.
+A mobile-first gamified exploration application for Kuala Lumpur's MRT infrastructure. Users discover attractions, check in at physical locations, complete verification challenges, and earn achievement badges across the Kajang and Putrajaya lines.
 
-MRTQuest is a mobile-first web application for urban explorers. Riders can browse attractions near each MRT station, check in at sites, earn badges, track their journey in a personal passport, and suggest new places to visit — all without leaving their browser.
-
-**Scope:** Kajang Line · Putrajaya Line · 16 active stations · 24 attractions
+**Coverage:** Kajang Line, Putrajaya Line, 16 operational stations, 24 mapped attractions.
 
 ---
 
 ## Features
 
-| Page | What it does |
+| Feature | Description |
 |---|---|
-| **Home** (`/`) | Landing page with app tagline and live stats (sites, stations, lines) |
-| **Explore** (`/explore`) | Browse stations by MRT line via an interactive map; open suggestion form |
-| **Station** (`/station/[id]`) | View all attractions at a specific station with check-in and directions |
-| **Badge** (`/badge`) | See all available badges, track earned vs locked, filter by category |
-| **Passport** (`/passport`) | Personal summary of visited sites, reviews left, and badges earned |
-| **Suggestions API** (`POST /api/suggestions`) | Submit a new attraction suggestion for review |
+| **Authentication** | OAuth via Google and email-password credentials with persistent session management |
+| **Station Explorer** | Browseable catalog of MRT stations organized by line with full attraction inventory per station |
+| **Check-in System** | Progressive verification through geofence proximity detection, AI-powered landmark photo verification, and location-based trivia challenges |
+| **Gamification** | Comprehensive badge system with eight criteria types including visit counts, station coverage, line mastery, and time-based achievements |
+| **User Profile** | Passport dashboard displaying cumulative quest points, earned badges, recent visits, and user progression rankings |
+| **Suggestions** | User-submitted attraction proposals for operator review and catalog expansion |
 
 ---
 
@@ -28,203 +26,302 @@ MRTQuest is a mobile-first web application for urban explorers. Riders can brows
 | Framework | Next.js 15+ (App Router) |
 | UI Library | React 19 |
 | Language | TypeScript (strict mode) |
-| Styling | Tailwind CSS v4 (CSS-configured, no `tailwind.config.js`) |
+| Styling | Tailwind CSS v4 (CSS-configured) |
 | Icons | Lucide React |
-| Database & Auth | Supabase (Postgres + `@supabase/ssr`) |
+| ORM | Prisma 6.19+ |
+| Database | PostgreSQL (Supabase) |
+| Authentication | Better Auth 1.6.9 (OAuth + email-password) |
+| Image Verification | Google Gemini AI |
+| Geolocation | geolib v3 |
 | Package Manager | pnpm |
 
 ---
 
 ## Database Schema
 
-| Table | Purpose | Key Columns |
-|---|---|---|
-| `stations` | MRT stations on both lines | `name`, `line`, `sequence_order`, `active` |
-| `attractions` | Points of interest near a station | `station_id`, `name`, `category`, `google_map`, `image_url` |
-| `profiles` | User profiles extending `auth.users` | `username`, `avatar_url` |
-| `reviews` | Star ratings and comments on attractions | `user_id`, `site_id`, `rating` (1–5), `comment` |
-| `visits` | Check-in log per user per attraction | `user_id`, `site_id`, `visited_at` |
-| `quizzes` | Quiz questions linked to an attraction | `site_id`, `question`, `correct_answer` |
-| `user_quiz_attempts` | Records of quiz answers per user | `user_id`, `quiz_id`, `is_correct` |
-| `badges` | Badge definitions and unlock criteria | `criteria_type`, `criteria_value`, `criter_target`, `station_id` |
-| `user_badges` | Badges earned by each user | `user_id`, `badge_id`, `earned_at` |
+Core application tables (managed via Prisma ORM):
 
-See [`docs/badge-logic.md`](docs/badge-logic.md) for badge criteria details and [`docs/dbschema.md`](docs/dbschema.md) for the full ER diagram.
+| Model | Purpose | Key Fields |
+|---|---|---|
+| `Station` | MRT station metadata | `name`, `line`, `latitude`, `longitude`, `sequenceOrder`, `active` |
+| `Attraction` | Points of interest linked to stations | `stationId`, `name`, `description`, `latitude`, `longitude`, `verificationType`, `checkInRadius` |
+| `Profile` | User profile extension | `username`, `avatarUrl` |
+| `Visit` | Check-in event log | `userId`, `siteId`, `visitedAt`, `verificationType` |
+| `Quiz` | Trivia questions per attraction | `siteId`, `question`, `correctAnswer`, `points`, `options` |
+| `UserQuizAttempt` | Quiz submission records | `userId`, `quizId`, `isCorrect`, `pointsEarned` |
+| `Badge` | Achievement definitions | `name`, `criteriaType`, `criteriaValue`, `criteriaTarget`, `stationId` |
+| `UserBadge` | User-earned badges | `userId`, `badgeId`, `earnedAt` |
+| `Review` | User ratings and comments | `userId`, `siteId`, `rating` (1-5), `comment` |
+
+Authentication tables (Better Auth managed):
+
+| Model | Purpose |
+|---|---|
+| `User` (ba_user) | Authentication identity |
+| `Account` (ba_account) | OAuth provider links |
+| `Session` (ba_session) | Active session tokens |
+| `Verification` (ba_verification) | Email OTP records |
+
+Complete schema available in [prisma/schema.prisma](prisma/schema.prisma).
 
 ---
 
 ## Project Structure
 
 ```
-app/
-  layout.tsx                  # Root layout: Header + TabBar + page slot
-  page.tsx                    # Home / landing page
-  globals.css                 # Tailwind v4 CSS config + global styles
-  badge/page.tsx              # Badge hub
-  explore/page.tsx            # MRT line explorer
-  passport/page.tsx           # User journey tracker
-  station/[stationId]/page.tsx  # Station detail (SSR)
-  api/suggestions/route.ts    # POST endpoint for attraction suggestions
+app/                            # Next.js App Router pages and API routes
+  api/
+    auth/[...auth]/             # Better Auth handler
+    badges/                     # GET badge definitions and user progress
+    quiz/submit/                # POST quiz submission and grading
+    stations/                   # GET stations and attractions
+    visits/
+      checkin/                  # POST check-in (geofence verification)
+      verify-photo/             # POST photo verification via Gemini AI
+      check-status/             # GET verification history for attraction
+  badge/page.tsx                # Badge catalog with filtering
+  explore/page.tsx              # Station browser with line selection
+  login/page.tsx                # Authentication entry point
+  passport/page.tsx             # User dashboard and stats
+  station/[stationId]/page.tsx  # Station detail with attractions
+  quiz/[attractionId]/page.tsx  # Quiz interface
+  signup/page.tsx               # User registration
 
 src/
   components/
-    AttractionCard.tsx        # Card UI for a single attraction
-    BadgeCard.tsx             # Badge tile (earned / locked states)
-    BadgeModal.tsx            # Badge detail overlay
-    Header.tsx                # Sticky top navigation bar
-    HeritageSite.tsx          # (Legacy — see AttractionCard)
-    MRTMap.tsx                # Visual MRT line with clickable stations
-    RatingModal.tsx           # Star rating + comment form modal
-    StationSitesList.tsx      # Renders list of AttractionCards for a station
-    SuggestionForm.tsx        # Modal form to submit new attraction suggestion
-    TabBar.tsx                # Fixed bottom navigation (Explore / Badge / Passport)
-    Tooltip.tsx               # Hover tooltip wrapper
+    AttractionCard.tsx          # Attraction display with verification UI
+    BadgeCard.tsx               # Badge tile (locked/earned states)
+    BadgeModal.tsx              # Badge detail modal
+    BadgeToast.tsx              # Achievement notification
+    Button.tsx                  # Reusable button component
+    Header.tsx                  # Sticky header navigation
+    Modal.tsx                   # Reusable modal wrapper
+    MRTMap.tsx                  # Interactive line visualization
+    MrtSignupCard.tsx           # Registration form component
+    PhotoCaptureButton.tsx      # Webcam capture interface
+    ProximityBadge.tsx          # Distance indicator
+    QuizCard.tsx                # Quiz question display
+    RatingModal.tsx             # Review submission form
+    StarRating.tsx              # Rating input control
+    StationSitesList.tsx        # Attraction list for station
+    SuggestionForm.tsx          # Attraction suggestion modal
+    TabBar.tsx                  # Fixed bottom navigation
+    Tooltip.tsx                 # Tooltip wrapper
+  types/
+    quiz.ts                     # TypeScript types for quiz model
   utils/
+    auth.ts                     # Better Auth server configuration
+    auth-client.ts              # Client-side session hook
+    badges.ts                   # Badge evaluation logic and criteria
+    prisma.ts                   # Prisma client instance
+    useAttractionVerification.ts # Distance calculation hook
     supabase/
-      client.ts               # Browser-side Supabase client (use in 'use client' components)
-      server.ts               # Server-side Supabase client (use in Server Components + API routes)
-      middleware.ts           # Next.js middleware stub (prepared for auth redirects)
+      client.ts                 # Supabase client (reference data reads)
+      server.ts                 # Supabase server client
+      middleware.ts             # Auth middleware configuration
+
+prisma/
+  schema.prisma                 # Data model and migrations
 
 docs/
-  badge-logic.md              # Badge criteria types and award logic
-  dbschema.md                 # ER diagram for all tables
-
-supabase/
-  schema.sql                  # Full Postgres schema reference (read-only context)
+  badge-logic.md                # Badge criteria types and evaluation rules
+  check-in.md                   # Check-in flow documentation
+  auth-flow.md                  # Authentication flow overview
+  dbschema.md                   # Database schema reference
 ```
 
 ---
 
 ## Environment Variables
 
-Create a `.env.local` file in the project root:
+Create a `.env.local` file in the project root with the following configuration:
 
 ```env
-# Supabase — public (safe to expose to the browser)
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-anon-key
+# Database connection (Prisma)
+DATABASE_URL="postgresql://user:password@host:5432/mrtquest"
+DIRECT_URL="postgresql://user:password@host:5432/mrtquest"
 
-# Supabase — secret (server-side only, never expose to the browser)
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+# Better Auth configuration
+BETTER_AUTH_URL=http://localhost:3000
+BETTER_AUTH_SECRET=your-random-secret-key
+
+# OAuth providers
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+
+# External APIs
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your-google-maps-key
+GOOGLE_AI_API_KEY=your-gemini-api-key
+
+# Supabase (reference data reads only)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-> `SUPABASE_SERVICE_ROLE_KEY` is only needed for privileged server-side operations (e.g., admin data seeding). Do **not** reference it in client components or expose it in browser bundles.
+Note: Do not commit `.env.local` to version control.
 
 ---
 
-## Local Setup
+## Getting Started
+
+### Prerequisites
+- Node.js 18 or later
+- pnpm package manager
+- PostgreSQL database (or Supabase project)
+- Google OAuth credentials
+- Google Gemini API key
+
+### Installation
 
 ```bash
-# 1. Clone the repository
+# Clone the repository
 git clone https://github.com/your-username/MRTQuest.git
 cd MRTQuest
 
-# 2. Install dependencies
+# Install dependencies
 pnpm install
 
-# 3. Set up environment variables
-cp .env.example .env.local   # then fill in your Supabase credentials
+# Configure environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
 
-# 4. Start the development server
+# Run database migrations
+pnpm prisma migrate dev
+
+# Start development server
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Access the application at [http://localhost:3000](http://localhost:3000).
 
 ---
 
 ## Available Scripts
 
-| Command | Description |
+| Command | Purpose |
 |---|---|
-| `pnpm dev` | Start Next.js development server with hot reload |
-| `pnpm build` | Create a production build |
-| `pnpm start` | Serve the production build locally |
-| `pnpm lint` | Run ESLint across all source files |
+| `pnpm dev` | Start development server with hot module reloading |
+| `pnpm build` | Build production bundle |
+| `pnpm start` | Serve production build locally |
+| `pnpm lint` | Run ESLint validation |
+| `pnpm prisma generate` | Generate Prisma client |
+| `pnpm prisma migrate dev` | Create and apply database migration |
+| `pnpm prisma studio` | Open Prisma Studio web interface |
 
 ---
 
-## Architecture Notes
+## Architecture
 
-### Client vs Server Components
-- **Server Components** (default, no directive): used for data-fetching pages like `station/[stationId]/page.tsx`. Runs on the server, never ships JS to the browser.
-- **Client Components** (`'use client'`): used only when interactivity is needed — `useState`, `useEffect`, event handlers. Examples: `explore/page.tsx`, `badge/page.tsx`, `TabBar.tsx`, `SuggestionForm.tsx`.
+### Authentication System
 
-### Supabase Data Flow
-1. Pages fetch data server-side using `createClient()` from `src/utils/supabase/server.ts`.
-2. Client components fetch using `createClient()` from `src/utils/supabase/client.ts`.
-3. Data flows down as props — leaf components never fetch independently.
-4. Parallel independent queries use `Promise.all([...])`.
+The application uses Better Auth for identity management with support for multiple authentication methods:
+
+- **Email and Password**: Direct credential-based authentication with profile creation
+- **OAuth (Google)**: Social login integration via Google OAuth 2.0
+- **Session Management**: HTTP-only cookie-based sessions with automatic refresh handling
+- **User Context**: Session data passed down through Server Components via `auth.api.getSession()`
+
+Authentication flow enforces redirects (authenticated users directed to `/passport`) via [middleware.ts](middleware.ts).
+
+### Data Architecture
+
+**Data Fetching Pattern:**
+- Server Components retrieve data at the page level using Prisma client
+- Data flows down to child components via props
+- Client Components use fetch-on-mount for state updates only
+- Parallel independent queries utilize `Promise.all([...])`
+
+**Data Persistence:**
+- Prisma ORM handles all mutations and schema-enforced validations
+- Supabase PostgreSQL backend
+- Supabase client used selectively for reference data reads to optimize query patterns
+
+**Security Model:**
+- Session-based user isolation (all queries filtered by authenticated userId)
+- No database-level row-level security; application layer enforces access control
+- Service role keys used only for administrative aggregations (badge counts, stats)
+
+### Check-in Verification System
+
+Three-phase progressive verification workflow:
+
+**Phase 1: Geofence Detection**
+- User location calculated via browser Geolocation API
+- Distance computed using haversine formula (geolib library)
+- Check-in enabled when user is within 300m radius
+- Visit record created with `verificationType: 'geofence'`
+
+**Phase 2: Landmark Photo Verification (Optional)**
+- User captures photo via webcam
+- Image sent to Google Gemini AI for landmark recognition
+- Verification confirms user proximity at photo capture time
+- Confidence threshold (default 70%) determines success
+- Additional Visit record created with `verificationType: 'photo'`
+- Awards bonus points on successful verification
+
+**Phase 3: Trivia Quiz Challenge (Optional)**
+- Multi-choice questions presented after check-in
+- User attempts quiz questions specific to the attraction
+- Submissions recorded in UserQuizAttempt with correctness validation
+- Points awarded based on answer accuracy
+
+**Badge Evaluation**: Triggered automatically after each phase completion to evaluate all badge criteria against user's activity history.
 
 ### Badge System
-Badges are defined in the `badges` table with a `criteria_type` field:
 
-| `criteria_type` | Unlock condition |
+Flexible criteria-based achievement framework supporting multiple unlock patterns:
+
+| Criteria Type | Unlock Condition |
 |---|---|
-| `visit_count` | User visits N attractions (with optional category/line filter) |
-| `line_master` | User visits all stations on a given MRT line |
-| `quiz_master` | User answers all quizzes for a site correctly |
-| `first_review` | User submits their first review |
-| `frequent_traveler` | User accumulates 20+ visits overall |
+| `visit_count` | User accumulates N total visits (optionally scoped by category or line) |
+| `station_stamp` | User visits specific designated station |
+| `line_master` | User visits all active stations on a given MRT line |
+| `quiz_master` | User achieves N correct quiz submissions |
+| `first_review` | User submits initial review |
+| `photo_review` | User submits N reviews including photos |
+| `time_check` | User check-in occurs before/after specific hour (Malaysia Standard Time) |
+| `multi_line` | User accumulates visits across multiple MRT lines |
 
-See [`docs/badge-logic.md`](docs/badge-logic.md) for the full specification and recommended SQL query patterns.
+Badge evaluation maintains deduplication (counts unique attractions only) and uses batch creation to handle multiple badge awards in single transaction.
+
+### Component Patterns
+
+**Server Components** (default, no directive):
+- Data-fetching pages such as `station/[stationId]/page.tsx`
+- Server-side rendering with no client-side JavaScript
+- Direct Prisma queries with session-based filtering
+
+**Client Components** (`'use client'`):
+- Components requiring React state management (`useState`, `useReducer`)
+- Components using browser APIs (`useEffect`, event handlers, Geolocation)
+- Interactive elements requiring immediate user feedback
+
+### API Route Handlers
+
+All API routes follow consistent patterns:
+
+1. Extract authenticated user from session
+2. Validate request parameters
+3. Execute database operations via Prisma
+4. Evaluate badges post-action (for mutations)
+5. Return structured JSON response
 
 ---
 
-## Roadmap
+## Development Notes
 
-- [ ] Wire up Supabase Auth (email/password or magic link)
-- [ ] Connect check-in button to `visits` table insert
-- [ ] Integrate `RatingModal` with `reviews` table
-- [ ] Implement badge awarding logic (evaluate criteria on check-in)
-- [ ] Replace hardcoded passport stats with real user data
-- [ ] Add quiz flow per attraction
-- [ ] Moderate and approve attraction suggestions (`is_verified` flag)
+- The application requires a PostgreSQL database (Supabase recommended for managed hosting)
+- Deployment targets serverless environments such as Vercel or AWS Lambda
+- Use `pnpm` exclusively for dependency management
+- Database migrations handled via `pnpm prisma migrate dev`
+- Type generation from schema executed automatically on `pnpm dev`
 
----
+## Documentation
 
-## Local development
+Additional technical documentation available in the `docs/` directory:
 
-From the `mrtquest` folder, use:
-
-```bash
-pnpm install
-pnpm dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
-## Supabase setup
-
-### Required environment variables
-Create a `.env.local` file in `mrtquest` with:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-```
-
-> Do not commit `.env.local`.
-
-### Current Supabase status
-- Supabase is chosen for the database backend.
-- The project is prepared to use Supabase from the serverless Next.js app.
-- Auth and data queries still need final wiring.
-
-## Project files to review
-- `package.json` — current dependency and script configuration.
-- `src/utils/supabase/middleware.ts` — currently a placeholder Next.js middleware file.
-- `src/app/page.tsx` — app entry page for the home screen.
-
-## Next steps
-1. Finalize Tailwind CSS configuration.
-2. Create Supabase tables: `stations`, `attractions`, `users`, etc.
-3. Build Supabase client helpers (`src/lib/supabase-client.ts` / `src/lib/supabase-server.ts`).
-4. Add API routes for stations and attractions.
-5. Render the MRT map and station discovery UI.
-
-## Notes
-- The app is intended to remain serverless; Supabase handles persistence.
-- Use `pnpm` for installs and commands.
-- The app will be deployed on a serverless host such as Vercel.
+- [Badge Logic](docs/badge-logic.md) - Badge criteria types and evaluation rules
+- [Check-in Flow](docs/check-in.md) - Detailed check-in process documentation  
+- [Authentication Flow](docs/auth-flow.md) - Better Auth integration details
+- [Database Schema](docs/dbschema.md) - Full data model reference
+- [Architecture Overview](docs/architecture.md) - System design and patterns
