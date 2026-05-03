@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/utils/supabase/client';
 import { Lightbulb, X } from 'lucide-react';
 
 interface SuggestionFormProps {
@@ -19,20 +18,16 @@ export function SuggestionForm({ isOpen, onClose, onSuccess }: SuggestionFormPro
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  const supabase = createClient();
-
-  // Fetch stations on mount
+  // Fetch stations on mount from API
   useEffect(() => {
     const fetchStations = async () => {
-      const { data, error: fetchError } = await supabase
-        .from('stations')
-        .select('id, name')
-        .order('name');
-
-      if (fetchError) {
-        console.error('Error fetching stations:', fetchError);
-      } else {
-        setStations(data || []);
+      try {
+        const response = await fetch('/api/stations');
+        if (!response.ok) throw new Error('Failed to fetch stations');
+        const data = await response.json();
+        setStations(data.stations || []);
+      } catch (err) {
+        console.error('Error fetching stations:', err);
       }
     };
 

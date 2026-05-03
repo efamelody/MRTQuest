@@ -1,55 +1,56 @@
 import { ArrowLeft, MapPin, Map } from 'lucide-react';
 import Link from 'next/link';
-import { createServiceClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { StationSitesList } from '@/components/StationSitesList';
 
 interface PageProps {
   params: Promise<{ stationId: string }>;
 }
 
-interface AttractionRow {
-  id: string;
-  name: string;
-  description: string | null;
-  image_url: string | null;
-  google_map: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  check_in_radius: number | null;
-  has_quiz_challenge: boolean | null;
-  has_photo_challenge: boolean | null;
-  ai_prompt: string | null;
-}
-
-interface QuizRow {
-  id: string;
-  site_id: string;
-  question: string;
-  correct_answer: string;
-  options: string[];
-  sort_order: number | null;
-  points: number | null;
-}
-
 export default async function StationPage({ params }: PageProps) {
   const { stationId } = await params;
-  const supabase = createServiceClient();
 
-  const [{ data: stationData }, { data: siteData }, { data: quizData }] = await Promise.all([
-    supabase.from('stations').select('name').eq('id', stationId).single(),
-    supabase
-      .from('attractions')
-      .select('id,name,description,image_url,google_map,latitude,longitude,check_in_radius,has_quiz_challenge,has_photo_challenge,ai_prompt')
-      .eq('station_id', stationId)
-      .eq('is_verified', true)
-      .order('name', { ascending: true }),
-    supabase
-      .from('quizzes')
-      .select('id,site_id,question,correct_answer,options,sort_order,points')
-      .order('sort_order', { ascending: true }),
+  // Fetch station, attractions, and quizzes in parallel using Prisma
+  const [station, attractions, quizzes] = await Promise.all([
+    prisma.station.findUnique({
+      where: { id: stationId },
+      select: { name: true },
+    }),
+    prisma.attraction.findMany({
+      where: {
+        stationId,
+        isVerified: true,
+      },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        imageUrl: true,
+        googleMap: true,
+        latitude: true,
+        longitude: true,
+        checkInRadius: true,
+        has_quiz_challenge: true,
+        has_photo_challenge: true,
+        ai_prompt: true,
+      },
+      orderBy: { name: 'asc' },
+    }),
+    prisma.quiz.findMany({
+      select: {
+        id: true,
+        siteId: true,
+        question: true,
+        correctAnswer: true,
+        options: true,
+        sortOrder: true,
+        points: true,
+      },
+      orderBy: { sortOrder: 'asc' },
+    }),
   ]);
 
-  const stationName = stationData?.name ??
+  const stationName = station?.name ??
     (stationId
       ? stationId
           .split('-')
@@ -57,18 +58,18 @@ export default async function StationPage({ params }: PageProps) {
           .join(' ')
       : 'Unknown Station');
 
-  // Group quizzes by site_id for easy lookup
-  const quizzesByAttraction = (quizData ?? []).reduce(
-    (acc, quiz: QuizRow) => {
-      if (!acc[quiz.site_id]) {
-        acc[quiz.site_id] = [];
+  // Group quizzes by siteId for easy lookup
+  const quizzesByAttraction = quizzes.reduce(
+    (acc, quiz) => {
+      if (!acc[quiz.siteId]) {
+        acc[quiz.siteId] = [];
       }
-      acc[quiz.site_id].push({
+      acc[quiz.siteId].push({
         id: quiz.id,
         question: quiz.question,
-        correctAnswer: quiz.correct_answer,
+        correctAnswer: quiz.correctAnswer,
         options: quiz.options || [],
-        sortOrder: quiz.sort_order || 0,
+        sortOrder: quiz.sortOrder || 0,
         points: quiz.points,
       });
       return acc;
@@ -83,15 +84,15 @@ export default async function StationPage({ params }: PageProps) {
     }>>
   );
 
-  const attractions = (siteData ?? []).map((site: AttractionRow) => ({
+  const attractionsList = attractions.map((site) => ({
     id: site.id,
     name: site.name,
     description: site.description ?? 'No description available.',
-    image: site.image_url ?? undefined,
-    googleMap: site.google_map ?? undefined,
+    image: site.imageUrl ?? undefined,
+    googleMap: site.googleMap ?? undefined,
     latitude: site.latitude ?? undefined,
     longitude: site.longitude ?? undefined,
-    checkInRadius: site.check_in_radius ?? 300,
+    checkInRadius: site.checkInRadius ?? 300,
     hasQuizChallenge: site.has_quiz_challenge ?? false,
     hasPhotoChallenge: site.has_photo_challenge ?? false,
     photoPrompt: site.ai_prompt ?? undefined,
@@ -128,9 +129,9 @@ export default async function StationPage({ params }: PageProps) {
           </div>
         </div>
 
-        <StationSitesList sites={attractions} />
+        <StationSitesList sites={attractionsList} />
 
-        {attractions.length === 0 && (
+        {attractionsList.length === 0 && (
           <div className="text-center py-12">
             <Map className="w-16 h-16 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-600">No attractions found nearby</p>

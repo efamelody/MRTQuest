@@ -1,5 +1,5 @@
 import { auth } from '@/utils/auth';
-import { createServiceClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -9,61 +9,69 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Session-based filtering: "New RLS" ← userId from Better Auth session
   const userId = session.user.id;
-  const supabase = createServiceClient();
 
-  const [visitRes, reviewRes, badgeRes, recentRes] = await Promise.all([
-    supabase.from('visits').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase.from('user_badges').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-    supabase
-      .from('visits')
-      .select('id,visited_at,site_id(name)')
-      .eq('user_id', userId)
-      .order('visited_at', { ascending: false })
-      .limit(3),
-  ]);
-
-  const queryError =
-    visitRes.error?.message ??
-    reviewRes.error?.message ??
-    badgeRes.error?.message ??
-    recentRes.error?.message;
-
-  if (queryError) {
-    return NextResponse.json({ error: queryError }, { status: 500 });
-  }
-
-  const badgeCount = badgeRes.count ?? 0;
-  let earnedBadges: Array<{ id: string; name: string; icon: string | null }> = [];
-
-  if (badgeCount > 0) {
-    const { data: badgeData } = await supabase
-      .from('user_badges')
-      .select('badge_id, badges(id,name,icon)')
-      .eq('user_id', userId)
-      .limit(3);
-
-    earnedBadges = (badgeData ?? []).map((entry: any) => ({
-      id: entry.badge_id as string,
-      name: (entry.badges?.name as string | undefined) ?? 'Badge',
-      icon: (entry.badges?.icon as string | undefined) ?? null,
-    }));
-  }
-
-  return NextResponse.json({
-    visitCount: visitRes.count ?? 0,
-    reviewCount: reviewRes.count ?? 0,
-    badgeCount,
-    recentVisits: (recentRes.data ?? []).map((visit: any) => ({
-      id: visit.id as string,
-      name: (visit.site_id?.name as string | undefined) ?? 'Unknown location',
-      visitedAt: new Date(visit.visited_at as string).toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
+  try {
+    const [visits, reviews, badges, recentVisits] = await Promise.all([
+      // Count user's visits (filtered by userId)
+      prisma.visit.count({ where: { userId } }),
+      // Count user's reviews (filtered by userId)
+      prisma.review.count({ where: { userId } }),
+      // Count user's earned badges (filtered by userId)
+      prisma.userBadge.count({ where: { userId } }),
+      // Get 3 most recent visits with attraction details (filtered by userId)
+      prisma.visit.findMany({
+        where: { userId },  // ← userId filter
+        select: {
+          id: true,
+          visitedAt: true,
+          attraction: {
+            select: { name: true },
+          },
+        },
+        orderBy: { visitedAt: 'desc' },
+        take: 3,
       }),
-    })),
-    earnedBadges,
-  });
+    ]);
+
+    // Fetch recently earned badges
+    const earnedBadges = await prisma.userBadge.findMany({
+      where: { userId },  // ← userId filter
+      select: {
+        badgeId: true,
+        badge: {
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+          },
+        },
+      },
+      take: 3,
+    });
+
+    return NextResponse.json({
+      visitCount: visits,
+      reviewCount: reviews,
+      badgeCount: badges,
+      recentVisits: recentVisits.map((visit) => ({
+        id: visit.id,
+        name: visit.attraction?.name ?? 'Unknown location',
+        visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        }),
+      })),
+      earnedBadges: earnedBadges.map((ub) => ({
+        id: ub.badgeId,
+        name: ub.badge?.name ?? 'Badge',
+        icon: ub.badge?.icon ?? null,
+      })),
+    });
+  } catch (error) {
+    console.error('[/api/passport] Error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
 }

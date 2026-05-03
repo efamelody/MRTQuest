@@ -1,20 +1,6 @@
 import { auth } from '@/utils/auth';
-import { createServiceClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from 'next/server';
-
-type VisitRow = {
-  id: string;
-  visited_at: string;
-  verification_type: string | null;
-  site_id: string | null;
-  attractions: {
-    name: string;
-    stations: {
-      name: string;
-      line: string;
-    } | null;
-  } | null;
-};
 
 export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
@@ -23,52 +9,72 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // Session-based filtering: "New RLS" ← userId from Better Auth session
   const userId = session.user.id;
-  const supabase = createServiceClient();
 
-  const { data, error } = await supabase
-    .from('visits')
-    .select('id,visited_at,verification_type,site_id,attractions(name,stations(name,line))')
-    .eq('user_id', userId)
-    .order('visited_at', { ascending: false })
-    .limit(100);
+  try {
+    // Fetch user's visits with attraction and station details (filtered by userId)
+    const visits = await prisma.visit.findMany({
+      where: { userId },  // ← userId filter
+      select: {
+        id: true,
+        visitedAt: true,
+        verificationType: true,
+        attraction: {
+          select: {
+            name: true,
+            station: {
+              select: {
+                name: true,
+                line: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { visitedAt: 'desc' },
+      take: 100,
+    });
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
+    // Deduplicate by siteId — one entry per attraction, photo verification wins
+    const seen = new Map<string, { name: string; stationName: string; line: string; visitedAt: string; isPhotoVerified: boolean }>();
 
-  // Deduplicate by site_id — one entry per attraction, photo verification wins
-  const seen = new Map<string, { name: string; stationName: string; line: string; visitedAt: string; isPhotoVerified: boolean }>();
+    for (const visit of visits) {
+      const siteId = visit.attraction?.station?.name;
+      if (!siteId) continue;
 
-  for (const row of (data ?? []) as VisitRow[]) {
-    const siteId = row.site_id;
-    if (!siteId) continue;
+      const isPhoto = visit.verificationType === 'photo';
+      const existing = seen.get(siteId);
 
-    const isPhoto = row.verification_type === 'photo';
-    const existing = seen.get(siteId);
-
-    if (!existing) {
-      seen.set(siteId, {
-        name: row.attractions?.name ?? 'Unknown attraction',
-        stationName: row.attractions?.stations?.name ?? 'Unknown station',
-        line: row.attractions?.stations?.line ?? '',
-        visitedAt: new Date(row.visited_at).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
-        isPhotoVerified: isPhoto,
-      });
-    } else if (isPhoto && !existing.isPhotoVerified) {
-      // Upgrade verification level if we find a photo visit for same site
-      seen.set(siteId, { ...existing, isPhotoVerified: true });
+      if (!existing) {
+        seen.set(siteId, {
+          name: visit.attraction?.name ?? 'Unknown attraction',
+          stationName: visit.attraction?.station?.name ?? 'Unknown station',
+          line: visit.attraction?.station?.line ?? '',
+          visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          }),
+          isPhotoVerified: isPhoto,
+        });
+      } else if (isPhoto && !existing.isPhotoVerified) {
+        // Upgrade verification level if we find a photo visit for same site
+        seen.set(siteId, { ...existing, isPhotoVerified: true });
+      }
     }
+
+    const visitHistory = Array.from(seen.entries()).map(([siteId, v]) => ({
+      siteId,
+      ...v,
+    }));
+
+    return NextResponse.json({ visits: visitHistory });
+  } catch (error) {
+    console.error('[/api/visits/history] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch visit history' },
+      { status: 500 }
+    );
   }
-
-  const visits = Array.from(seen.entries()).map(([siteId, v]) => ({
-    siteId,
-    ...v,
-  }));
-
-  return NextResponse.json({ visits, total: visits.length });
 }

@@ -1,5 +1,5 @@
 import { auth } from '@/utils/auth';
-import { createServiceClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 
 type BadgeRow = {
@@ -19,41 +19,64 @@ export async function GET(request: NextRequest) {
   const session = await auth.api.getSession({ headers: request.headers });
   const userId = session?.user?.id ?? null;
 
-  const supabase = createServiceClient();
+  try {
+    // Fetch all badges (reference data — no userId filter needed)
+    const allBadges = await prisma.badge.findMany({
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        icon: true,
+        criteriaType: true,
+        criteriaValue: true,
+        criteriaTarget: true,
+        stationId: true,
+        station: {
+          select: { active: true },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
 
-  const { data: allBadges, error: badgesError } = await supabase
-    .from('badges')
-    .select('id,name,description,icon,criteria_type,criteria_value,criteria_target,station_id,stations(active)')
-    .order('name', { ascending: true });
+    // If user is authenticated, fetch their earned badges (filtered by userId — "New RLS")
+    const userBadgeMap = new Map<string, { earned_at: string }[]>();
 
-  if (badgesError) {
-    return NextResponse.json({ error: badgesError.message }, { status: 500 });
-  }
+    if (userId) {
+      const userBadges = await prisma.userBadge.findMany({
+        where: { userId },  // ← userId filter (Better Auth session)
+        select: {
+          badgeId: true,
+          earnedAt: true,
+        },
+      });
 
-  const earnedMap = new Map<string, { earned_at: string }[]>();
-
-  if (userId) {
-    const { data: userBadges, error: ubError } = await supabase
-      .from('user_badges')
-      .select('badge_id,earned_at')
-      .eq('user_id', userId);
-
-    if (ubError) {
-      return NextResponse.json({ error: ubError.message }, { status: 500 });
+      for (const ub of userBadges) {
+        const existing = userBadgeMap.get(ub.badgeId) ?? [];
+        existing.push({ earned_at: ub.earnedAt.toISOString() });
+        userBadgeMap.set(ub.badgeId, existing);
+      }
     }
 
-    for (const ub of userBadges ?? []) {
-      const existing = earnedMap.get(ub.badge_id) ?? [];
-      existing.push({ earned_at: ub.earned_at });
-      earnedMap.set(ub.badge_id, existing);
-    }
+    // Transform to match expected response format
+    const badges: BadgeRow[] = allBadges.map((badge) => ({
+      id: badge.id,
+      name: badge.name,
+      description: badge.description,
+      icon: badge.icon,
+      criteria_type: badge.criteriaType,
+      criteria_value: badge.criteriaValue,
+      criteria_target: badge.criteriaTarget,
+      station_id: badge.stationId,
+      stations: badge.station ? [{ active: badge.station.active }] : null,
+      user_badges: userBadgeMap.get(badge.id) ?? [],
+    }));
+
+    return NextResponse.json({ badges });
+  } catch (error) {
+    console.error('[/api/badges] Error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch badges' },
+      { status: 500 }
+    );
   }
-
-  const badges: BadgeRow[] = (allBadges ?? []).map((badge) => ({
-    ...badge,
-    stations: badge.stations as Array<{ active: boolean }> | null,
-    user_badges: earnedMap.get(badge.id) ?? [],
-  }));
-
-  return NextResponse.json({ badges });
 }
