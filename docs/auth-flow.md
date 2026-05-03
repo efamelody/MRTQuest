@@ -55,16 +55,48 @@ Every page load / navigation
 
 ## Reading the Current User
 
-Only use this pattern in `'use client'` components:
+### In Server Components or Async Server Pages
+
+```ts
+import { auth } from "@/utils/auth";
+import { headers } from "next/headers";
+
+export default async function QuizPage() {
+  const session = await auth.api.getSession({ headers: await headers() });
+  
+  if (!session) {
+    notFound();  // or redirect to login
+  }
+  
+  const userId = session.user.id;  // ba_user.id
+  const userEmail = session.user.email;
+  
+  // Now fetch user-specific data with Prisma
+  // ...
+}
+```
+
+[Full example: app/quiz/[attractionId]/page.tsx](app/quiz/[attractionId]/page.tsx)
+
+### In Client Components
 
 ```ts
 import { useSession } from "@/utils/auth-client";
 
-const { data: session, isPending } = useSession();
-const userId = session?.user?.id ?? null;
+export function PassportPage() {
+  const { data: session, isPending } = useSession();
+  
+  if (isPending) return <div>Loading...</div>;
+  if (!session) return <LoginPrompt />;
+  
+  const userId = session.user.id;  // ba_user.id
+  return <UserProfile userId={userId} />;
+}
 ```
 
-`userId` is the Better Auth user ID (`ba_user.id`) which is also `profiles.id`.
+[Full example: app/badge/page.tsx](app/badge/page.tsx)
+
+> `userId` is the Better Auth user ID (`ba_user.id`) which is also `profiles.id`.
 
 ---
 
@@ -90,14 +122,161 @@ Better Auth stores users in `public.ba_user`. All app user data hangs off `publi
 
 ```
 ba_user.id (text)  ←  Better Auth manages this
-  └── profiles.id (text)
+  └── profiles.id (text)  ← Foreign key constraint
         ├── visits.user_id
         ├── reviews.user_id
         ├── user_badges.user_id
         └── user_quiz_attempts.user_id
 ```
 
-> A `profiles` row must be created for each new user after their first sign-in, using the same `id` as `ba_user.id`.
+> A `profiles` row **must** be created for each new user after their first sign-in, using the same `id` as `ba_user.id`. This is enforced by the FK constraint.
+
+---
+
+## Profile Initialization Pattern
+
+Every API mutation that involves user data must first upsert a Profile row. This ensures the FK constraint is satisfied:
+
+```ts
+import { prisma } from "@/utils/prisma";
+import { auth } from "@/utils/auth";
+
+export async function POST(request: NextRequest) {
+  // 1. Extract user from session
+  const session = await auth.api.getSession({ headers: request.headers });
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const userId = session.user.id;
+
+  // 2. Ensure profile exists (before any user data mutations)
+  await prisma.profile.upsert({
+    where: { id: userId },
+    update: {},  // No-op if exists
+    create: { id: userId },
+  });
+
+  // 3. Now safe to create visits, quiz attempts, badges, etc.
+  const visit = await prisma.visit.create({
+    data: {
+      userId,
+      siteId: attractionId,
+      verificationType: 'geofence',
+    },
+  });
+
+  return NextResponse.json({ visitId: visit.id });
+}
+```
+
+[Example: app/api/visits/checkin/route.ts](app/api/visits/checkin/route.ts)
+
+---
+
+## API Route Authentication Pattern
+
+### Template
+
+```ts
+import { auth } from "@/utils/auth";
+import { prisma } from "@/utils/prisma";
+import { NextRequest, NextResponse } from "next/server";
+
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Get session from request headers
+    const session = await auth.api.getSession({ headers: request.headers });
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please log in.' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
+
+    // 2. Parse and validate request
+    const body = await request.json();
+    if (!body.attractionId) {
+      return NextResponse.json(
+        { error: 'Missing required field: attractionId' },
+        { status: 400 }
+      );
+    }
+
+    // 3. Ensure profile exists
+    await prisma.profile.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+    });
+
+    // 4. Perform mutation
+    const result = await prisma.visit.create({
+      data: {
+        userId,
+        siteId: body.attractionId,
+        verificationType: 'geofence',
+      },
+    });
+
+    return NextResponse.json({ success: true, data: result });
+  } catch (error) {
+    console.error('[api-route-name]', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+---
+
+## End-to-End: Quiz Submission with Badge Evaluation
+
+Here's how a quiz submission flows through authentication, profile initialization, data storage, and badge evaluation:
+
+```
+1. Browser → POST /api/quiz/submit { attractionId, answers }
+   └── Client Component collected quiz answers from form
+
+2. API Route (app/api/quiz/submit/route.ts)
+   ├── Extract session: await auth.api.getSession({ headers })
+   ├── Verify userId (throw 401 if missing)
+   │
+   ├── Upsert Profile:
+   │   await prisma.profile.upsert({
+   │     where: { id: userId },
+   │     create: { id: userId }
+   │   })
+   │
+   ├── Score each answer:
+   │   for each quizId in answers:
+   │     const quiz = await prisma.quiz.findUnique({ ... })
+   │     const isCorrect = (userAnswer === quiz.correctAnswer)
+   │     const pointsEarned = isCorrect ? 50 : 0
+   │
+   ├── Create UserQuizAttempt records:
+   │   await prisma.userQuizAttempt.create({
+   │     data: { userId, quizId, isCorrect, pointsEarned }
+   │   })
+   │
+   ├── Evaluate badges (async, not awaited):
+   │   await evaluateBadges(userId)
+   │     ├── Query all badges
+   │     ├── Check user's visit count, quiz attempts, etc.
+   │     ├── Determine if user qualifies for any new badges
+   │     └── Create UserBadge rows for newly earned badges
+   │
+   └── Return: { results: [ ... ], newBadges: [ ... ] }
+
+3. Browser receives response
+   └── Display quiz results + newly earned badges (if any)
+```
+
+[See the full implementation: app/api/quiz/submit/route.ts](app/api/quiz/submit/route.ts)
 
 ---
 

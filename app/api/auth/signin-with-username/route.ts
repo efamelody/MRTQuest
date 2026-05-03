@@ -1,4 +1,4 @@
-import { createServiceClient } from '@/utils/supabase/server';
+import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -15,42 +15,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔍 [signin-with-username] Creating Supabase client...');
-    const supabase = createServiceClient();
-    
-    console.log('🔍 [signin-with-username] Querying ba_user table for username:', username);
-    // Query by 'name' field since that's where the username is stored during signup
-    const { data: allResults, error: queryError } = await supabase
-      .from('ba_user')
-      .select('id, email, name')
-      .ilike('name', username);
+    console.log('🔍 [signin-with-username] Querying User table for username:', username);
+    // Query User (ba_user) table by name field
+    const user = await prisma.user.findFirst({
+      where: {
+        name: {
+          mode: 'insensitive',  // Case-insensitive search
+          equals: username,
+        },
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+      },
+    });
 
-    console.log('🔍 [signin-with-username] Query result - data:', allResults, 'error:', queryError);
+    console.log('🔍 [signin-with-username] Query result:', user);
 
-    if (queryError) {
-      console.error('❌ [signin-with-username] Supabase error:', queryError);
-      return NextResponse.json(
-        { error: `Database error: ${queryError.message}` },
-        { status: 500 }
-      );
-    }
-
-    if (!allResults || allResults.length === 0) {
-      console.log('❌ [signin-with-username] No users found. Checking if name column has data...');
-      // Debug: check if ANY users have names
-      const { data: allUsers } = await supabase
-        .from('ba_user')
-        .select('id, email, name')
-        .limit(5);
-      console.log('🔍 [signin-with-username] Sample of all users:', allUsers);
-      
+    if (!user) {
+      console.log('❌ [signin-with-username] No user found with username:', username);
       return NextResponse.json(
         { error: 'Username not found' },
         { status: 404 }
       );
     }
 
-    const user = allResults[0];
     console.log('✅ [signin-with-username] Found user:', { id: user.id, email: user.email, name: user.name });
     return NextResponse.json({ email: user.email });
   } catch (err) {
@@ -61,3 +51,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
