@@ -64,11 +64,17 @@ export default function LoginPage() {
       const { email } = await emailRes.json();
 
       // Sign in with email and password
-      await authClient.signIn.email({
+      const { data, error } = await authClient.signIn.email({
         email,
         password,
         callbackURL: "/passport",
       });
+
+      if (error) {
+        setError(error.message || "Failed to sign in");
+        setIsLoading(false);
+        return;
+      }
 
       router.push("/passport");
     } catch (err) {

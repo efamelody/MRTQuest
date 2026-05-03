@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
-import { PrismaClient } from '@prisma/client';
-
-const prisma = new PrismaClient();
+import { prisma } from '@/utils/prisma';
+import { evaluateBadges } from '@/utils/badges';
 
 interface SubmitQuizRequest {
   attractionId: string;
@@ -31,6 +30,13 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
+
+    // Ensure a profile row exists (profiles FK-references ba_user)
+    await prisma.profile.upsert({
+      where: { id: userId },
+      update: {},
+      create: { id: userId },
+    });
 
     // Parse request body
     const body: SubmitQuizRequest = await request.json();
@@ -97,9 +103,16 @@ export async function POST(request: NextRequest) {
         totalPoints += pointsEarned;
       }
 
-      // Create attempt record
-      await prisma.userQuizAttempt.create({
-        data: {
+      // Upsert so re-attempts overwrite the previous record
+      await prisma.userQuizAttempt.upsert({
+        where: { userId_quizId: { userId, quizId: quiz.id } },
+        update: {
+          isCorrect,
+          answer_provided: userAnswer,
+          points_earned: pointsEarned,
+          attemptedAt: new Date(),
+        },
+        create: {
           userId,
           quizId: quiz.id,
           isCorrect,
@@ -120,6 +133,8 @@ export async function POST(request: NextRequest) {
 
     await Promise.all(attemptPromises);
 
+    const newBadges = await evaluateBadges(userId);
+
     return NextResponse.json(
       {
         success: true,
@@ -127,6 +142,7 @@ export async function POST(request: NextRequest) {
         correctCount: totalCorrect,
         totalPoints,
         results,
+        newBadges,
       },
       { status: 200 }
     );

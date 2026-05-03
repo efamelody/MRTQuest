@@ -2,11 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Award, Clock3, LogOut, MapPin, Sparkles, Star, UserCircle2, Loader2 } from 'lucide-react';
-import { createClient } from '@/utils/supabase/client';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/utils/auth-client';
-
-const supabase = createClient();
 
 type EarnedBadge = {
   id: string;
@@ -46,64 +43,21 @@ export default function PassportPage() {
       setIsLoading(true);
       setError(null);
 
-      const [visitRes, reviewRes, badgeRes, recentRes] = await Promise.all([
-        supabase.from('visits').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase.from('user_badges').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-        supabase
-          .from('visits')
-          .select('id,visited_at,site_id(name)')
-          .eq('user_id', userId)
-          .order('visited_at', { ascending: false })
-          .limit(3),
-      ]);
+      const res = await fetch('/api/passport');
 
-      if (visitRes.error || reviewRes.error || badgeRes.error || recentRes.error) {
-        setError(
-          visitRes.error?.message ??
-            reviewRes.error?.message ??
-            badgeRes.error?.message ??
-            recentRes.error?.message ??
-            'Unable to load passport data.',
-        );
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? 'Unable to load passport data.');
         setIsLoading(false);
         return;
       }
 
-      setVisitCount(visitRes.count ?? 0);
-      setReviewCount(reviewRes.count ?? 0);
-      setBadgeCount(badgeRes.count ?? 0);
-
-      const recent = (recentRes.data ?? []).map((visit: any) => ({
-        id: visit.id,
-        name: visit.site_id?.name ?? 'Unknown location',
-        visitedAt: new Date(visit.visited_at).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
-        rating: 4,
-      }));
-      setRecentVisits(recent);
-
-      if ((badgeRes.count ?? 0) > 0) {
-        const { data: badgeData, error: badgeDetailError } = await supabase
-          .from('user_badges')
-          .select('badge_id, badges(id,name,icon)')
-          .eq('user_id', userId)
-          .limit(3);
-
-        if (!badgeDetailError) {
-          setEarnedBadges(
-            (badgeData ?? []).map((entry: any) => ({
-              id: entry.badge_id,
-              name: entry.badges?.name ?? 'Badge',
-              icon: entry.badges?.icon ?? null,
-            })),
-          );
-        }
-      }
-
+      const data = await res.json();
+      setVisitCount(data.visitCount);
+      setReviewCount(data.reviewCount);
+      setBadgeCount(data.badgeCount);
+      setRecentVisits(data.recentVisits);
+      setEarnedBadges(data.earnedBadges);
       setIsLoading(false);
     };
 

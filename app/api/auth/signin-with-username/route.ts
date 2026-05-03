@@ -1,4 +1,4 @@
-import { createClient } from '@/utils/supabase/server';
+import { createServiceClient } from '@/utils/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('🔍 [signin-with-username] Creating Supabase client...');
-    const supabase = await createClient();
+    const supabase = createServiceClient();
     
     console.log('🔍 [signin-with-username] Querying ba_user table for username:', username);
     // Query by 'name' field since that's where the username is stored during signup

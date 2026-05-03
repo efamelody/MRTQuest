@@ -1,19 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Get the session cookie set by Better Auth
-  const sessionCookie = request.cookies.get("better-auth.session_token");
-  const isAuthenticated = !!sessionCookie?.value;
-
-  // Redirect to passport if trying to access login while already authenticated
-  if ((pathname === "/login") && isAuthenticated) {
-    return NextResponse.redirect(new URL("/passport", request.url));
-  }
-
-  // All other routes (including /passport) are publicly accessible
-  // The pages handle showing appropriate UI based on auth state
+  // Middleware runs on the Edge runtime and cannot validate sessions via Prisma.
+  // Auth-gated redirects (e.g. /login → /passport) are handled client-side
+  // by each page using the useSession() hook.
   return NextResponse.next();
 }
 

@@ -38,19 +38,24 @@ export default function MrtSignupCard() {
     }
 
     try {
-      // Sign up with Better Auth — username will be stored in ba_user.username
-      await authClient.signUp.email({
+      // Sign up with Better Auth — username will be stored in ba_user.name
+      const { data, error } = await authClient.signUp.email({
         email,
         password,
         name: username,
       });
+
+      if (error) {
+        setError(error.message || 'Sign up failed. Username or email may already exist.');
+        setIsLoading(false);
+        return;
+      }
 
       router.push('/passport');
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Sign up failed. Username or email may already exist.'
       );
-    } finally {
       setIsLoading(false);
     }
   };

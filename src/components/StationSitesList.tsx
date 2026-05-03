@@ -1,16 +1,7 @@
 'use client';
 
-import AttractionCheckInCard from './AttractionCheckInCard';
-import QuizCard from './QuizCard';
-
-interface Quiz {
-  id: string;
-  question: string;
-  correctAnswer: string;
-  options: string[];
-  points: number | null;
-  sortOrder?: number;
-}
+import AttractionCard from './AttractionCard';
+import type { Quiz } from '@/types/quiz';
 
 interface SiteData {
   id: string;
@@ -23,6 +14,8 @@ interface SiteData {
   longitude?: number | null;
   checkInRadius?: number;
   hasQuizChallenge?: boolean;
+  hasPhotoChallenge?: boolean;
+  photoPrompt?: string;
   quizzes?: Quiz[];
 }
 
@@ -34,27 +27,22 @@ export function StationSitesList({ sites }: StationSitesListProps) {
   return (
     <div className="space-y-6">
       {sites.map((site) => (
-        <div key={site.id} className="space-y-2">
-          <AttractionCheckInCard
-            id={site.id}
-            name={site.name}
-            description={site.description}
-            image={site.image}
-            rating={site.rating}
-            googleMap={site.googleMap}
-            latitude={site.latitude}
-            longitude={site.longitude}
-            checkInRadius={site.checkInRadius}
-          />
-          {site.hasQuizChallenge && site.quizzes && site.quizzes.length > 0 && (
-            <QuizCard
-              attractionId={site.id}
-              attractionName={site.name}
-              quizzes={site.quizzes}
-              hasQuizChallenge={site.hasQuizChallenge}
-            />
-          )}
-        </div>
+        <AttractionCard
+          key={site.id}
+          id={site.id}
+          name={site.name}
+          description={site.description}
+          image={site.image}
+          rating={site.rating}
+          googleMap={site.googleMap}
+          latitude={site.latitude}
+          longitude={site.longitude}
+          checkInRadius={site.checkInRadius}
+          hasPhotoChallenge={site.hasPhotoChallenge}
+          hasQuizChallenge={site.hasQuizChallenge}
+          photoPrompt={site.photoPrompt}
+          quizzes={site.quizzes}
+        />
       ))}
     </div>
   );
