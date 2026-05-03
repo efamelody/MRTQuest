@@ -10,6 +10,7 @@ interface PhotoCaptureButtonProps {
   userLongitude: number;
   canTakePhoto: boolean;
   lockReason?: string;
+  photoPrompt?: string;
   onSuccess: () => void;
   onError: (error: string) => void;
 }
@@ -32,6 +33,7 @@ export default function PhotoCaptureButton({
   userLongitude,
   canTakePhoto,
   lockReason,
+  photoPrompt,
   onSuccess,
   onError,
 }: PhotoCaptureButtonProps) {
@@ -308,6 +310,14 @@ export default function PhotoCaptureButton({
         disabled={isLoading}
         className="hidden"
       />
+      
+      {/* What to photograph */}
+      {photoPrompt && !capturedImage && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-amber-600 mb-0.5">What to photograph</p>
+          <p className="text-xs text-amber-800">{photoPrompt}</p>
+        </div>
+      )}
 
       {!isCameraOpen && !capturedImage && (
         <button

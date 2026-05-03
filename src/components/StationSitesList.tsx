@@ -15,6 +15,7 @@ interface SiteData {
   checkInRadius?: number;
   hasQuizChallenge?: boolean;
   hasPhotoChallenge?: boolean;
+  photoPrompt?: string;
   quizzes?: Quiz[];
 }
 
@@ -39,6 +40,7 @@ export function StationSitesList({ sites }: StationSitesListProps) {
           checkInRadius={site.checkInRadius}
           hasPhotoChallenge={site.hasPhotoChallenge}
           hasQuizChallenge={site.hasQuizChallenge}
+          photoPrompt={site.photoPrompt}
           quizzes={site.quizzes}
         />
       ))}

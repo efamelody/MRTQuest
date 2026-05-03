@@ -1,5 +1,6 @@
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
+import { evaluateBadges } from '@/utils/badges';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -44,7 +45,8 @@ export async function POST(request: NextRequest) {
       select: { id: true },
     });
 
-    return NextResponse.json({ visitId: visit.id, alreadyCheckedIn: false });
+    const newBadges = await evaluateBadges(userId);
+    return NextResponse.json({ visitId: visit.id, alreadyCheckedIn: false, newBadges });
   } catch (error) {
     console.error('[checkin] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

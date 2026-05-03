@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
+import { evaluateBadges } from '@/utils/badges';
 
 interface SubmitQuizRequest {
   attractionId: string;
@@ -132,6 +133,8 @@ export async function POST(request: NextRequest) {
 
     await Promise.all(attemptPromises);
 
+    const newBadges = await evaluateBadges(userId);
+
     return NextResponse.json(
       {
         success: true,
@@ -139,6 +142,7 @@ export async function POST(request: NextRequest) {
         correctCount: totalCorrect,
         totalPoints,
         results,
+        newBadges,
       },
       { status: 200 }
     );

@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
 import Button from '@/components/Button';
 import type { Quiz } from '@/types/quiz';
+import type { EarnedBadge } from '@/utils/badges';
+import { BadgeToast } from '@/components/BadgeToast';
 
 interface QuizCardProps {
   attractionId: string;
@@ -28,6 +30,7 @@ interface SubmitResponse {
   correctCount: number;
   totalPoints: number;
   results: QuizResult[];
+  newBadges?: EarnedBadge[];
 }
 
 export default function QuizCard({
@@ -41,6 +44,7 @@ export default function QuizCard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submissionResults, setSubmissionResults] = useState<SubmitResponse | null>(null);
+  const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
 
   // Don't render if quiz challenge is not enabled or no quizzes
   if (!hasQuizChallenge || !quizzes || quizzes.length === 0) {
@@ -82,6 +86,9 @@ export default function QuizCard({
 
       const data: SubmitResponse = await response.json();
       setSubmissionResults(data);
+      if (data.newBadges?.length) {
+        setEarnedBadges(data.newBadges);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'An error occurred';
       setSubmitError(message);
@@ -94,12 +101,15 @@ export default function QuizCard({
     setSelectedAnswers({});
     setSubmissionResults(null);
     setSubmitError(null);
+    setEarnedBadges([]);
   };
 
   // If results are shown, display the results view
   if (submissionResults) {
     return (
-      <div className="rounded-3xl bg-white/70 backdrop-blur-sm p-6 mb-6">
+      <>
+        <BadgeToast badges={earnedBadges} onDismiss={() => setEarnedBadges([])} />
+        <div className="rounded-3xl bg-white/70 backdrop-blur-sm p-6 mb-6">
         <div className="text-center mb-6">
           <div className="text-5xl mb-4">
             {submissionResults.correctCount === submissionResults.totalQuestions ? '🎉' : '📊'}
@@ -162,6 +172,7 @@ export default function QuizCard({
           )}
         </div>
       </div>
+      </>
     );
   }
 

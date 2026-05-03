@@ -7,6 +7,8 @@ import PhotoCaptureButton from './PhotoCaptureButton';
 import { useAttractionVerification } from '@/utils/useAttractionVerification';
 import { useRouter } from 'next/navigation';
 import type { Quiz } from '@/types/quiz';
+import type { EarnedBadge } from '@/utils/badges';
+import { BadgeToast } from '@/components/BadgeToast';
 
 interface AttractionCardProps {
   id: string;
@@ -20,6 +22,7 @@ interface AttractionCardProps {
   checkInRadius?: number;
   hasPhotoChallenge?: boolean;
   hasQuizChallenge?: boolean;
+  photoPrompt?: string;
   quizzes?: Quiz[];
   onRate?: (rating: number) => void;
 }
@@ -36,10 +39,12 @@ export default function AttractionCard({
   checkInRadius = 300,
   hasPhotoChallenge = false,
   hasQuizChallenge = false,
+  photoPrompt,
   quizzes = [],
   onRate,
 }: AttractionCardProps) {
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
   const router = useRouter();
 
   const {
@@ -63,6 +68,21 @@ export default function AttractionCard({
   const handleGetDirections = () => {
     const directionUrl = googleMap ?? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}`;
     window.open(directionUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleCheckIn = async () => {
+    const res = await fetch('/api/visits/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attractionId: id }),
+    });
+    if (res.ok) {
+      const data = await res.json() as { visitId: string; alreadyCheckedIn: boolean; newBadges?: EarnedBadge[] };
+      setIsCheckedIn(true);
+      if (data.newBadges?.length) {
+        setEarnedBadges(data.newBadges);
+      }
+    }
   };
 
   // Render the primary button based on current journey state
@@ -105,6 +125,7 @@ export default function AttractionCard({
                     userLatitude={coords!.latitude}
                     userLongitude={coords!.longitude}
                     canTakePhoto={true}
+                    photoPrompt={photoPrompt}
                     onSuccess={() => { setIsPhotoVerified(true); setIsPhotoOpen(false); }}
                     onError={(err) => console.error(err)}
                   />
@@ -139,16 +160,7 @@ export default function AttractionCard({
           <p className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 px-1">You have arrived!</p>
           <div className="flex gap-2">
             <button
-                onClick={async () => {
-                  const res = await fetch('/api/visits/checkin', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ attractionId: id }),
-                  });
-                  if (res.ok) {
-                    setIsCheckedIn(true);
-                  }
-                }}
+                onClick={handleCheckIn}
                 className="flex-1 bg-primary text-white h-12 rounded-xl font-bold flex items-center justify-center gap-2"
               >
                 Check In Now
@@ -180,7 +192,9 @@ export default function AttractionCard({
   };
 
   return (
-    <div className="group rounded-[2rem] bg-white border-2 border-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+    <>
+      <BadgeToast badges={earnedBadges} onDismiss={() => setEarnedBadges([])} />
+      <div className="group rounded-4xl bg-white border-2 border-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
       {/* 1. Visual Anchor */}
       <div className="relative h-48 overflow-hidden">
         {image ? (
@@ -195,7 +209,7 @@ export default function AttractionCard({
             <span className="text-xs font-bold text-slate-700">{rating}</span>
           </div>
         )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent" />
         <h3 className="absolute bottom-4 left-4 text-white font-bold text-xl drop-shadow-md">{name}</h3>
       </div>
 
@@ -225,5 +239,6 @@ export default function AttractionCard({
         <button id={`photo-btn-${id}`} />
       </div>
     </div>
+    </>
   );
 }
