@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     let totalCorrect = 0;
     let totalPoints = 0;
 
-    const attemptPromises = quizzes.map(async (quiz) => {
+    const attemptPromises = quizzes.map(async (quiz: { id: string; question: string; correctAnswer: string; points: number | null }) => {
       const userAnswer = answers[quiz.id];
 
       // If user didn't answer this question, skip it
