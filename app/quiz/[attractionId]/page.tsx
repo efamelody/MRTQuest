@@ -60,7 +60,7 @@ export default async function QuizPage({ params }: PageProps) {
   });
 
   // Map quiz data to component format
-  const formattedQuizzes = quizzes.map((q) => ({
+  const formattedQuizzes = quizzes.map((q: { id: string; question: string; correctAnswer: string; options: string[]; sortOrder: number; points: number | null }) => ({
     id: q.id,
     question: q.question,
     correctAnswer: q.correctAnswer,
