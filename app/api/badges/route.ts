@@ -2,6 +2,18 @@ import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { NextRequest, NextResponse } from 'next/server';
 
+type BadgeQueryResult = {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  criteriaType: string | null;
+  criteriaValue: number | null;
+  criteriaTarget: string | null;
+  stationId: string | null;
+  station: { active: boolean } | null;
+};
+
 type BadgeRow = {
   id: string;
   name: string;
@@ -58,7 +70,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform to match expected response format
-    const badges: BadgeRow[] = allBadges.map((badge) => ({
+    const badges: BadgeRow[] = allBadges.map((badge: BadgeQueryResult) => ({
       id: badge.id,
       name: badge.name,
       description: badge.description,

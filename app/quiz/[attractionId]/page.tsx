@@ -103,7 +103,7 @@ export default async function QuizPage({ params }: PageProps) {
           <QuizCard
             attractionId={attractionId}
             attractionName={attraction.name}
-            quizzes={quizzes}
+            quizzes={formattedQuizzes}
             hasQuizChallenge={true}
           />
         )}

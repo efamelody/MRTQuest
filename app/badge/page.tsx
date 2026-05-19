@@ -322,7 +322,7 @@ export default function BadgePage() {
           </div>
         )}
 
-      {!hasUser && activeTab !== 'visits' && (
+      {!hasUser && (
         <section className="px-6 mb-10 mt-6">
           <div className="rounded-3xl bg-white/80 p-5 shadow-sm border border-slate-200">
             <p className="text-sm text-slate-600">Connect a user session to see earned badges and progress tracking.</p>
