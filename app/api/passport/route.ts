@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
           year: 'numeric',
         }),
       })),
-      earnedBadges: earnedBadges.map((ub) => ({
+      earnedBadges: earnedBadges.map((ub: { badgeId: string; badge: { id: string; name: string; icon: string | null } | null }) => ({
         id: ub.badgeId,
         name: ub.badge?.name ?? 'Badge',
         icon: ub.badge?.icon ?? null,
