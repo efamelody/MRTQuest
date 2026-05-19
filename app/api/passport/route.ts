@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       visitCount: visits,
       reviewCount: reviews,
       badgeCount: badges,
-      recentVisits: recentVisits.map((visit) => ({
+      recentVisits: recentVisits.map((visit: { id: string; visitedAt: Date; attraction: { name: string } | null }) => ({
         id: visit.id,
         name: visit.attraction?.name ?? 'Unknown location',
         visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
