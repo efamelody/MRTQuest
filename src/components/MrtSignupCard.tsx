@@ -64,7 +64,7 @@ export default function MrtSignupCard() {
     <div className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 p-6">
       
       {/* THE CARD CONTAINER */}
-      <div className="relative w-full max-w-[320px] aspect-[1/1.6] bg-[#00AEEF] rounded-[2rem] shadow-2xl overflow-hidden border-4 border-white flex flex-col font-sans">
+      <div className="relative w-full max-w-[320px] bg-[#00AEEF] rounded-[2rem] shadow-2xl border-4 border-white flex flex-col font-sans">
         
         {/* TOP LOGOS SECTION */}
         <div className="flex justify-between items-start p-6 pb-2">

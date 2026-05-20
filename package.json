@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -20,10 +21,10 @@
     "next": "16.2.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "react-webcam": "^7.2.0"
+    "react-webcam": "^7.2.0",
+    "@prisma/client": "^6.19.3"
   },
   "devDependencies": {
-    "@prisma/client": "^6.19.3",
     "@tailwindcss/cli": "^4.2.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
