@@ -6,6 +6,7 @@ import StarRating from './StarRating';
 import PhotoCaptureButton from './PhotoCaptureButton';
 import { useAttractionVerification } from '@/utils/useAttractionVerification';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/utils/auth-client';
 import type { Quiz } from '@/types/quiz';
 import type { EarnedBadge } from '@/utils/badges';
 import { BadgeToast } from '@/components/BadgeToast';
@@ -46,6 +47,7 @@ export default function AttractionCard({
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
   const router = useRouter();
+  const { data: session, isPending: isSessionLoading } = useSession();
 
   const {
     currentPhase,
@@ -87,6 +89,25 @@ export default function AttractionCard({
 
   // Render the primary button based on current journey state
   const renderActionHub = () => {
+    if (isSessionLoading) {
+      return (
+        <div className="w-full h-12 bg-slate-100 animate-pulse rounded-xl flex items-center justify-center text-slate-400 text-sm">
+          Loading...
+        </div>
+      );
+    }
+
+    if (!session?.user?.id) {
+      return (
+        <button
+          onClick={() => router.push('/passport')}
+          className="w-full bg-primary text-white h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+        >
+          Sign in to start exploring
+        </button>
+      );
+    }
+
     if (isLoadingLocation) {
       return (
         <div className="w-full h-12 bg-slate-100 animate-pulse rounded-xl flex items-center justify-center text-slate-400 text-sm">
