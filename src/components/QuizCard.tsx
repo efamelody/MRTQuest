@@ -6,6 +6,7 @@ import Button from '@/components/Button';
 import type { Quiz } from '@/types/quiz';
 import type { EarnedBadge } from '@/utils/badges';
 import { BadgeToast } from '@/components/BadgeToast';
+import { ConfettiEffect } from '@/components/ConfettiEffect';
 
 interface QuizCardProps {
   attractionId: string;
@@ -45,6 +46,7 @@ export default function QuizCard({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submissionResults, setSubmissionResults] = useState<SubmitResponse | null>(null);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   // Don't render if quiz challenge is not enabled or no quizzes
   if (!hasQuizChallenge || !quizzes || quizzes.length === 0) {
@@ -86,6 +88,9 @@ export default function QuizCard({
 
       const data: SubmitResponse = await response.json();
       setSubmissionResults(data);
+      if (data.correctCount === data.totalQuestions) {
+        setShowConfetti(true);
+      }
       if (data.newBadges?.length) {
         setEarnedBadges(data.newBadges);
       }
@@ -108,6 +113,11 @@ export default function QuizCard({
   if (submissionResults) {
     return (
       <>
+        <ConfettiEffect
+          active={showConfetti}
+          onComplete={() => setShowConfetti(false)}
+          variant="quiz"
+        />
         <BadgeToast badges={earnedBadges} onDismiss={() => setEarnedBadges([])} />
         <div className="rounded-3xl bg-white/70 backdrop-blur-sm p-6 mb-6">
         <div className="text-center mb-6">

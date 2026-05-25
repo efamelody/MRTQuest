@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { MRTMap } from '@/components/MRTMap';
 import { SuggestionForm } from '@/components/SuggestionForm';
+import { MissionBoard } from '@/components/MissionBoard';
 import { Lightbulb, PlusCircle } from 'lucide-react';
 
 // import Button from '@/components/Button';
@@ -75,7 +76,38 @@ export default function ExplorePage() {
   const filteredStations = isActiveOnly
     ? stations.filter((s) => s.active)
     : stations;
-  //TODO: CALL API FOR STATIONS TIME
+
+  const missions = useMemo(() => {
+    const activeCount = stations.filter((s) => s.active).length;
+    const totalCount = stations.length;
+
+    return [
+      {
+        id: 'explore-stations',
+        title: 'Station Explorer',
+        description: `Check in at stations on the ${activeLineMeta.label}`,
+        progress: activeCount,
+        max: Math.max(totalCount, 1),
+        xpReward: 50,
+      },
+      {
+        id: 'photo-hunter',
+        title: 'Photo Hunter',
+        description: 'Verify a landmark with photo check-in',
+        progress: 0,
+        max: 1,
+        xpReward: 30,
+      },
+      {
+        id: 'quiz-champion',
+        title: 'Quiz Champion',
+        description: 'Complete a quiz challenge with perfect score',
+        progress: 0,
+        max: 1,
+        xpReward: 40,
+      },
+    ];
+  }, [stations, activeLineMeta.label]);
   return (
     <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto pb-20">
@@ -97,6 +129,11 @@ export default function ExplorePage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Active Missions */}
+        <div className="px-6 pb-6">
+          <MissionBoard missions={missions} />
         </div>
 
         {/* MRT Map */}

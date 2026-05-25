@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Fredoka, Outfit, Lilita_One, Quicksand } from "next/
 import { Header } from '@/components/Header';
 import "./globals.css";
 import { TabBar } from "@/components/TabBar";
+import { PageTransition } from '@/components/PageTransition';
+import { ParticleBackground } from '@/components/ParticleBackground';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -51,8 +53,11 @@ export default function RootLayout({
       className={`${geistSans.variable} ${quicksand.variable} ${geistMono.variable} ${lilitaOne.variable} ${fredoka.variable} ${outfit.variable} min-h-screen antialiased`}
     >
       <body className="min-h-screen flex flex-col">
+        <ParticleBackground />
         <Header />
-        <main className="flex-1 pb-24">{children}</main>
+        <main className="flex-1 pb-24">
+          <PageTransition>{children}</PageTransition>
+        </main>
         <TabBar />
       </body>
     </html>

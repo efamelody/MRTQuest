@@ -1,4 +1,5 @@
 import React from 'react'
+import { Ripple } from '@/components/Ripple'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'secondary'
@@ -25,19 +26,21 @@ export default function Button({
   const widthStyle = fullWidth ? 'w-full' : ''
   
   return (
-    <button
-      disabled={disabled || loading}
-      className={`${baseStyles} ${variantStyles[variant]} ${widthStyle} ${className}`}
-      {...props}
-    >
-      {loading ? (
-        <span className="inline-flex items-center gap-2">
-          <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
-          Loading...
-        </span>
-      ) : (
-        children
-      )}
-    </button>
+    <Ripple className="rounded-2xl">
+      <button
+        disabled={disabled || loading}
+        className={`${baseStyles} ${variantStyles[variant]} ${widthStyle} ${className}`}
+        {...props}
+      >
+        {loading ? (
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-current border-r-transparent" />
+            Loading...
+          </span>
+        ) : (
+          children
+        )}
+      </button>
+    </Ripple>
   )
 }

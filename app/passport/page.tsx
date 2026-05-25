@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Award, Clock3, LogOut, MapPin, Sparkles, Star, UserCircle2, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/utils/auth-client';
+import { useCountUp } from '@/utils/useCountUp';
+import { LevelProgress } from '@/components/LevelProgress';
 
 type EarnedBadge = {
   id: string;
@@ -72,6 +74,11 @@ export default function PassportPage() {
     return 'City Explorer';
   }, [questPoints]);
 
+  const animatedVisitCount = useCountUp(visitCount);
+  const animatedQuestPoints = useCountUp(questPoints);
+  const animatedStreakDays = useCountUp(streakDays);
+  const animatedBadgeCount = useCountUp(badgeCount);
+
   const handleLogout = async () => {
     try {
       await signOut({
@@ -121,10 +128,12 @@ export default function PassportPage() {
 
         {isAuthenticated ? (
           <>
+            <LevelProgress xp={questPoints} />
+
             <section className="flex gap-3">
-              <StatCard label="Stops Visited" value={String(visitCount)} icon={MapPin} />
-              <StatCard label="Quest Points" value={String(questPoints)} icon={Sparkles} />
-              <StatCard label="Day Streak" value={`${streakDays}d`} icon={Clock3} />
+              <StatCard label="Stops Visited" value={String(animatedVisitCount)} icon={MapPin} />
+              <StatCard label="Badges Earned" value={String(animatedBadgeCount)} icon={Award} />
+              <StatCard label="Day Streak" value={`${animatedStreakDays}d`} icon={Clock3} />
             </section>
 
             <section className="rounded-3xl bg-white/75 backdrop-blur-sm border border-white/70 p-6 shadow-sm">
