@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Trophy, Lock } from 'lucide-react';
 import { BadgeModal } from '@/components/BadgeModal';
 
@@ -21,11 +22,14 @@ export function BadgeCard({ badge, compact = false }: BadgeCardProps) {
 
   return (
     <>
-      <article
+      <motion.div
         tabIndex={0}
         onClick={() => setOpen(true)}
+        whileHover={{ scale: 1.05, rotate: [-1, 1, 0] }}
+        whileTap={{ scale: 0.95 }}
+        transition={{ type: 'spring', stiffness: 400, damping: 10 }}
         className={`
-          group relative cursor-pointer aspect-square rounded-[2rem] border transition-all duration-300 active:scale-95
+          group relative cursor-pointer aspect-square rounded-[2rem] border transition-all duration-300
           flex flex-col items-center justify-center text-center p-2
           ${isEarned 
             ? 'bg-white shadow-[0_8px_20px_-6px_rgba(0,169,89,0.2)] border-emerald-100' 
@@ -43,7 +47,7 @@ export function BadgeCard({ badge, compact = false }: BadgeCardProps) {
         {/* Icon Container */}
         <div
           className={`
-            mb-1 flex items-center justify-center rounded-2xl transition-transform group-hover:scale-110
+            mb-1 flex items-center justify-center rounded-2xl transition-transform
             ${compact ? 'h-14 w-14' : 'h-18 w-18'}
             ${isEarned ? 'bg-emerald-50' : 'bg-transparent'}
           `}
@@ -72,7 +76,7 @@ export function BadgeCard({ badge, compact = false }: BadgeCardProps) {
             </div>
           )}
         </div>
-      </article>
+      </motion.div>
 
       {open && <BadgeModal badge={badge} onClose={() => setOpen(false)} />}
     </>

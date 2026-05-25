@@ -10,6 +10,7 @@ import { useSession } from '@/utils/auth-client';
 import type { Quiz } from '@/types/quiz';
 import type { EarnedBadge } from '@/utils/badges';
 import { BadgeToast } from '@/components/BadgeToast';
+import { ConfettiEffect } from '@/components/ConfettiEffect';
 
 interface AttractionCardProps {
   id: string;
@@ -46,6 +47,7 @@ export default function AttractionCard({
 }: AttractionCardProps) {
   const [isPhotoOpen, setIsPhotoOpen] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<EarnedBadge[]>([]);
+  const [showConfetti, setShowConfetti] = useState(false);
   const router = useRouter();
   const { data: session, isPending: isSessionLoading } = useSession();
 
@@ -81,6 +83,7 @@ export default function AttractionCard({
     if (res.ok) {
       const data = await res.json() as { visitId: string; alreadyCheckedIn: boolean; newBadges?: EarnedBadge[] };
       setIsCheckedIn(true);
+      setShowConfetti(true);
       if (data.newBadges?.length) {
         setEarnedBadges(data.newBadges);
       }
@@ -214,6 +217,11 @@ export default function AttractionCard({
 
   return (
     <>
+      <ConfettiEffect
+        active={showConfetti}
+        onComplete={() => setShowConfetti(false)}
+        variant="checkin"
+      />
       <BadgeToast badges={earnedBadges} onDismiss={() => setEarnedBadges([])} />
       <div className="group rounded-4xl bg-white border-2 border-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
       {/* 1. Visual Anchor */}

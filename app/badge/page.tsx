@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { Award, Camera, Crown, MapPin, Ticket, Zap } from 'lucide-react';
 import { BadgeCard } from '@/components/BadgeCard';
 import { useSession } from '@/utils/auth-client';
@@ -256,13 +257,22 @@ export default function BadgePage() {
                   <h2 className="text-lg font-bold text-slate-900">Featured Achievements</h2>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">Line mastery and major milestones</p>
-                <div className="grid grid-cols-3 gap-3">
+                <motion.div
+                  className="grid grid-cols-3 gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                >
                   {filteredBadgesForTab.featured.map((badge) => (
-                    <div key={badge.id} className="aspect-square">
+                    <motion.div
+                      key={badge.id}
+                      className="aspect-square"
+                      variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    >
                       <BadgeCard badge={badge} compact />
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </section>
             )}
 
@@ -274,13 +284,22 @@ export default function BadgePage() {
                   <h2 className="text-lg font-bold text-slate-900">Station Stamps</h2>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">Collect one from every iconic station</p>
-                <div className="grid grid-cols-3 gap-3">
+                <motion.div
+                  className="grid grid-cols-3 gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                >
                   {filteredBadgesForTab.stamps.map((badge) => (
-                    <div key={badge.id} className="aspect-square">
+                    <motion.div
+                      key={badge.id}
+                      className="aspect-square"
+                      variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    >
                       <BadgeCard badge={badge} compact />
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </section>
             )}
 
@@ -292,13 +311,22 @@ export default function BadgePage() {
                   <h2 className="text-lg font-bold text-slate-900">Special Quests</h2>
                 </div>
                 <p className="text-xs text-slate-500 mb-4">Challenge badges and special conditions</p>
-                <div className="grid grid-cols-3 gap-3">
+                <motion.div
+                  className="grid grid-cols-3 gap-3"
+                  initial="hidden"
+                  animate="visible"
+                  variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
+                >
                   {filteredBadgesForTab.quests.map((badge) => (
-                    <div key={badge.id} className="aspect-square">
+                    <motion.div
+                      key={badge.id}
+                      className="aspect-square"
+                      variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}
+                    >
                       <BadgeCard badge={badge} compact />
-                    </div>
+                    </motion.div>
                   ))}
-                </div>
+                </motion.div>
               </section>
             )}
           </>
