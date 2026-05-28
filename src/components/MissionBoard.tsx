@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Target, CheckCircle2, Loader2, MapPin } from 'lucide-react';
+import { Target, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface Mission {
   id: string;
@@ -48,9 +48,8 @@ export function MissionBoard({ missions, isLoading }: MissionBoardProps) {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: i * 0.1 }}
-              className="shrink-0 w-64 rounded-2xl border-2 bg-white p-4"
+              className="shrink-0 w-64 rounded-2xl border-[1.5px] border-[#0F172A] bg-white p-4 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all"
               style={{
-                borderColor: isComplete ? '#10B981' : '#E8E0D6',
                 borderLeftColor: isComplete ? '#10B981' : lineColor,
                 borderLeftWidth: 4,
               }}
@@ -92,21 +91,19 @@ export function MissionBoard({ missions, isLoading }: MissionBoardProps) {
               </div>
 
               <div className="mt-3">
-                <div className="flex gap-1">
-                  {Array.from({ length: mission.max }).map((_, j) => (
-                    <div
-                      key={j}
-                      className="flex-1 h-2 rounded-sm transition-all duration-500"
-                      style={{
-                        background: j < mission.progress
-                          ? `linear-gradient(180deg, ${isComplete ? '#10B981' : lineColor}, ${isComplete ? '#059669' : '#0F766E'})`
-                          : '#E8E0D6',
-                        boxShadow: j < mission.progress
-                          ? `0 0 4px ${isComplete ? 'rgba(16,185,129,0.4)' : 'rgba(13,148,136,0.4)'}`
-                          : 'none',
-                      }}
-                    />
-                  ))}
+                <div className="h-2 rounded-[2px] bg-[#E8E0D6] overflow-hidden">
+                  <div
+                    className="h-full rounded-[2px] transition-all duration-700 ease-out"
+                    style={{
+                      width: `${pct}%`,
+                      background: isComplete
+                        ? 'linear-gradient(90deg, #10B981, #059669)'
+                        : `linear-gradient(90deg, ${lineColor}, ${lineColor}dd)`,
+                      boxShadow: isComplete
+                        ? '0 0 6px rgba(16,185,129,0.5)'
+                        : `0 0 6px ${lineColor}60`,
+                    }}
+                  />
                 </div>
                 <div className="flex items-center justify-between mt-1.5">
                   <span className="text-[10px] text-[#8B7E74]">

@@ -35,8 +35,6 @@ const lineMeta: Record<LineId, { label: string; colorClass: string; accentClass:
   },
 };
 
-const EXP_SEGMENTS = 16;
-
 export default function ExplorePage() {
   const [activeLine, setActiveLine] = useState<LineId>('kajang');
   const [stations, setStations] = useState<Station[]>([]);
@@ -122,8 +120,6 @@ export default function ExplorePage() {
   const playerExp = 840;
   const playerExpMax = 1000;
   const playerStreak = 7;
-  const filledExpSegments = Math.round((playerExp / playerExpMax) * EXP_SEGMENTS);
-
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto pb-20">
       <div className="flex-1 overflow-y-auto">
@@ -141,35 +137,23 @@ export default function ExplorePage() {
                 Discover hidden attractions along the MRT lines
               </p>
             </div>
-            <div className="bg-white rounded-xl border-2 border-[#E8E0D6] px-3 py-2 text-center min-w-[72px] shadow-sm">
+            <div className="bg-white rounded-xl border-[1.5px] border-[#0F172A] px-3 py-2 text-center min-w-[72px] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
               <div className="font-fredoka text-lg leading-none text-[#0D9488]">Lv.{playerLevel}</div>
               <div className="text-[9px] text-[#8B7E74] uppercase tracking-wider mt-0.5">Level</div>
             </div>
           </div>
 
           {/* ── Player Progress Card ── */}
-          <div className="bg-white rounded-2xl border-2 border-[#E8E0D6] p-4 shadow-[0_4px_16px_rgba(45,50,80,0.06)]">
+          <div className="bg-white rounded-2xl border-[1.5px] border-[#0F172A] p-4 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
             <div className="flex items-center justify-between mb-2">
               <span className="font-fredoka text-xs text-[#8B7E74]">EXP Progress</span>
               <span className="font-fredoka text-xs text-[#0D9488]">{playerExp} / {playerExpMax}</span>
             </div>
-            <div className="flex gap-1 mb-2">
-              {Array.from({ length: EXP_SEGMENTS }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 h-3 rounded-sm transition-all duration-500"
-                  style={{
-                    background: i < filledExpSegments
-                      ? i === filledExpSegments - 1
-                        ? 'linear-gradient(180deg, #10B981, #059669)'
-                        : 'linear-gradient(180deg, #0D9488, #0F766E)'
-                      : '#E8E0D6',
-                    boxShadow: i < filledExpSegments
-                      ? `0 0 6px ${i === filledExpSegments - 1 ? 'rgba(16,185,129,0.5)' : 'rgba(13,148,136,0.4)'}`
-                      : 'none',
-                  }}
-                />
-              ))}
+            <div className="arcade-exp-bar mb-2">
+              <div
+                className="arcade-exp-bar-fill"
+                style={{ width: `${(playerExp / playerExpMax) * 100}%` }}
+              />
             </div>
             <div className="flex items-center justify-between">
               <span className="font-fredoka text-[10px] text-[#8B7E74]">Lv.{playerLevel}</span>
@@ -215,12 +199,12 @@ export default function ExplorePage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveLine(tab.id)}
-                  className="flex-1 font-fredoka text-sm py-2.5 rounded-xl transition-all"
+                  className="flex-1 font-fredoka text-sm py-2.5 rounded-xl transition-all hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)]"
                   style={{
                     background: isActive ? lineColor : '#FFFFFF',
                     color: isActive ? '#FFFFFF' : '#8B7E74',
-                    border: `2px solid ${isActive ? lineColor : '#E8E0D6'}`,
-                    boxShadow: isActive ? `0 4px 12px ${lineColor}40` : 'none',
+                    border: '1.5px solid #0F172A',
+                    boxShadow: '3px 3px 0px 0px rgba(15,23,42,1)',
                   }}
                 >
                   {tab.emoji} {tab.label}
@@ -254,14 +238,14 @@ export default function ExplorePage() {
           <div className="section-divider mb-3">
             <span>Active Missions</span>
           </div>
-          <MissionBoard missions={missions} />
+          <MissionBoard missions={missions} isLoading={isLoading} />
         </div>
 
         {/* ── Suggestion Button ── */}
         <div className="px-5 pb-6">
           <button
             onClick={() => setIsSuggestionFormOpen(true)}
-            className="w-full rounded-2xl border-2 border-dashed border-[#D4CCC2] bg-white/60 p-4 flex items-center justify-center gap-2 text-[#8B7E74] hover:border-[#0D9488] hover:text-[#0D9488] transition-all active:scale-95"
+            className="w-full rounded-2xl border-[1.5px] border-dashed border-[#0F172A] bg-white/60 p-4 flex items-center justify-center gap-2 text-[#8B7E74] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:border-[#0D9488] hover:text-[#0D9488] transition-all active:scale-95"
           >
             <PlusCircle className="w-5 h-5" />
             <span className="font-fredoka text-sm">Suggest a hidden gem</span>

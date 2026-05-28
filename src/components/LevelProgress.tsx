@@ -41,7 +41,7 @@ export function LevelProgress({ xp }: LevelProgressProps) {
   const LevelIcon = currentLevel.icon;
 
   return (
-    <div className="rounded-3xl bg-white/75 backdrop-blur-sm border border-white/70 p-6 shadow-sm">
+    <div className="rounded-2xl bg-white border-[1.5px] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] p-6 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
       <div className="flex items-center gap-4">
         <div className={`flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl ${currentLevel.bg}`}>
           <LevelIcon className={`h-8 w-8 ${currentLevel.color}`} />
@@ -53,7 +53,7 @@ export function LevelProgress({ xp }: LevelProgressProps) {
             </span>
             <p className={`text-sm font-bold ${currentLevel.color}`}>{currentLevel.label}</p>
           </div>
-          <p className="mt-1 text-2xl font-bold text-heading">{animatedXp} <span className="text-sm font-normal text-slate-500">XP</span></p>
+          <p className="mt-1 text-2xl font-bold text-[#2D3250]">{animatedXp} <span className="text-sm font-normal text-slate-500">XP</span></p>
         </div>
       </div>
 
@@ -63,13 +63,18 @@ export function LevelProgress({ xp }: LevelProgressProps) {
             <span>Progress to {nextLevel.label}</span>
             <span>{xpToNext} XP remaining</span>
           </div>
-          <div className="h-3 rounded-full bg-slate-200 overflow-hidden">
-            <motion.div
-              className={`h-full rounded-full ${currentLevel.bar}`}
-              initial={{ width: 0 }}
-              animate={{ width: `${progressPct}%` }}
-              transition={{ duration: 1, ease: [0.25, 0.1, 0.25, 1] }}
-            />
+          <div className="h-4 rounded-[2px] bg-slate-200 overflow-hidden flex gap-[2px] p-[1px]">
+            {Array.from({ length: 20 }).map((_, i) => {
+              const segPct = (i + 1) * 5;
+              const filled = segPct <= progressPct;
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 ${filled ? currentLevel.bar : 'bg-slate-100'}`}
+                  style={filled && i === Math.ceil(progressPct / 5) - 1 ? { boxShadow: '0 0 6px rgba(13,148,136,0.4)' } : {}}
+                />
+              );
+            })}
           </div>
         </div>
       )}

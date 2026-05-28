@@ -132,23 +132,23 @@ export default function BadgePage() {
   }, [activeTab, badges, categorizedBadges]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
+    <div className="min-h-screen flex flex-col bg-[#FFF9F0] max-w-lg mx-auto">
       <div className="flex-1 overflow-y-auto pb-20">
         <div className="px-6 pt-8 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-slate-500">Badge Cabinet</p>
-              <h1 className="text-3xl text-heading font-bold tracking-tight">Achievements Hub</h1>
+              <h1 className="text-3xl font-gamified text-[#2D3250] leading-tight">Stamp Rally Journal</h1>
             </div>
           </div>
           <p className="mt-3 text-slate-600">See what you&apos;ve earned and what&apos;s still waiting in your collector cabinet.</p>
         </div>
 
         <section className="px-6">
-          <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-5 shadow-sm border-2 border-white">
+          <div className="bg-white rounded-2xl border-2 border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] p-5 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[5px_5px_0px_0px_rgba(15,23,42,1)] transition-all">
             <div className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm text-slate-500">Collected</p>
+                <p className="text-sm text-slate-500">Stamps Collected</p>
                 <p className="text-3xl font-bold text-slate-900">{badgeStats.earned} / {badgeStats.total}</p>
               </div>
               <div className="w-28 h-28 rounded-full bg-emerald-50 flex items-center justify-center">
@@ -156,11 +156,18 @@ export default function BadgePage() {
               </div>
             </div>
 
-            <div className="mt-5 h-3 rounded-full bg-slate-200 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-linear-to-r from-emerald-400 to-emerald-600"
-                style={{ width: badgeStats.total ? `${Math.round((badgeStats.earned / badgeStats.total) * 100)}%` : '0%' }}
-              />
+            <div className="mt-5 h-4 rounded-[2px] bg-slate-200 overflow-hidden flex gap-[2px] p-[1px]">
+              {(() => {
+                const ratio = badgeStats.total > 0 ? badgeStats.earned / badgeStats.total : 0;
+                const segs = Math.round(ratio * 20);
+                return Array.from({ length: 20 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className={`flex-1 ${i < segs ? 'bg-emerald-500' : 'bg-slate-100'}`}
+                    style={i < segs && i === segs - 1 ? { boxShadow: '0 0 6px rgba(16,185,129,0.5)' } : {}}
+                  />
+                ));
+              })()}
             </div>
             <p className="mt-3 text-xs uppercase tracking-[0.2em] text-slate-500">Progress toward your next milestone</p>
 
@@ -181,16 +188,16 @@ export default function BadgePage() {
         </section>
 
         {/* TAB SELECTOR */}
-        <div className="sticky top-0 z-40 bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 px-6 py-3 border-b border-slate-200/50">
+        <div className="sticky top-0 z-40 bg-[#FFF9F0] px-6 py-3 border-b border-[#0F172A]/10">
           <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {(['all', 'visits', 'earned', 'featured', 'stamps', 'quests'] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border ${
+                className={`whitespace-nowrap px-4 py-2 rounded-full text-xs font-bold transition-all border border-slate-900 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] ${
                   activeTab === tab
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'
+                    ? 'translate-x-[2px] translate-y-[2px] shadow-none bg-slate-900 text-white'
+                    : 'bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
                 {tab.charAt(0).toUpperCase() + tab.slice(1)}
