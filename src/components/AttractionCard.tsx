@@ -201,15 +201,18 @@ export default function AttractionCard({
       <div className="space-y-3">
         <button
           onClick={handleGetDirections}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white h-12 rounded-xl font-bold flex items-center justify-center gap-2 transition"
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white h-12 rounded-none font-bold flex items-center justify-center gap-2 border-[1.5px] border-[#0F172A] border-b-[4px] active:border-b-0 active:translate-y-[4px] transition-all"
         >
           <Navigation className="w-5 h-5" />
           Get Directions
         </button>
         {distance !== null && (
-          <p className="text-center text-xs text-slate-400">
-            Approximately <span className="font-bold text-slate-600">{distance}m</span> away
-          </p>
+          <div className="flex justify-center">
+            <div className="inline-flex items-center gap-1.5 rounded-md border border-[#0F172A] bg-slate-100 px-3 py-1.5 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)]">
+              <span className="text-[9px] uppercase tracking-[0.15em] font-bold text-slate-500">RADAR</span>
+              <span className="font-mono text-sm font-bold text-[#0D9488]">{distance}<span className="text-slate-500 text-[10px] font-mono">m</span></span>
+            </div>
+          </div>
         )}
       </div>
     );
@@ -223,13 +226,17 @@ export default function AttractionCard({
         variant="checkin"
       />
       <BadgeToast badges={earnedBadges} onDismiss={() => setEarnedBadges([])} />
-      <div className="group rounded-4xl bg-white border-2 border-white shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+      <div className="group rounded-2xl bg-white border-[1.5px] border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[5px_5px_0px_0px_rgba(15,23,42,1)] transition-all duration-300 overflow-hidden">
       {/* 1. Visual Anchor */}
       <div className="relative h-48 overflow-hidden">
         {image ? (
           <img src={image} alt={name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
         ) : (
-          <div className="w-full h-full bg-slate-200 flex items-center justify-center text-slate-400">No Image</div>
+          <div className="w-full h-full p-5 bg-slate-50">
+            <div className="w-full h-full border-2 border-dashed border-slate-300 rounded-lg flex items-center justify-center">
+              <span className="text-slate-400 text-sm font-medium">No Image</span>
+            </div>
+          </div>
         )}
         {/* Floating Star Badge */}
         {rating && (

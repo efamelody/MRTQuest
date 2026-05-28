@@ -100,17 +100,17 @@ export default async function StationPage({ params }: PageProps) {
   }));
 
   return (
-    <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto pb-20">
+    <div className="min-h-screen flex flex-col bg-[#FFF9F0] max-w-lg mx-auto pb-20">
       {/* Header */}
-      <div className="bg-white/70 backdrop-blur-sm border-b-2 border-white px-4 py-4 sticky top-0 z-10 flex items-center justify-between">
+      <div className="bg-white border-b-[1.5px] border-[#0F172A] px-4 py-4 sticky top-0 z-10 flex items-center justify-between shadow-[0_2px_0px_0px_rgba(15,23,42,1)]">
         <Link
           href="/"
-          className="flex items-center gap-2 text-slate-700 hover:text-primary transition-colors"
+          className="flex items-center gap-2 text-slate-700 hover:text-[#0D9488] transition-colors"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Back to Map</span>
         </Link>
-        <p className="text-lg text-heading flex items-center gap-2">
+        <p className="text-lg text-[#2D3250] font-fredoka flex items-center gap-2">
           <MapPin className="w-4 h-4" />
           {stationName}
         </p>
@@ -121,8 +121,8 @@ export default async function StationPage({ params }: PageProps) {
         <div className="mb-6">
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-3">
-              <MapPin className="w-10 h-7 text-heading" />
-              <h1 className="text-3xl font-serif text-heading">
+              <MapPin className="w-10 h-7 text-[#0D9488]" />
+              <h1 className="text-3xl font-gamified text-[#2D3250]">
                 {stationName}
               </h1>
             </div>
