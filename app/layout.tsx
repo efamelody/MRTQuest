@@ -29,12 +29,12 @@ const quicksand = Quicksand({
 
 const fredoka = Fredoka({
   subsets: ["latin"],
-  variable: "--font-fredoka", // Cute/Gamified font
+  variable: "--font-fredoka",
 });
 
 const outfit = Outfit({
   subsets: ["latin"],
-  variable: "--font-outfit", // Clean/Modern UI font
+  variable: "--font-outfit",
 });
 
 export const metadata: Metadata = {
@@ -52,7 +52,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${quicksand.variable} ${geistMono.variable} ${lilitaOne.variable} ${fredoka.variable} ${outfit.variable} min-h-screen antialiased`}
     >
-      <body className="min-h-screen flex flex-col">
+      <body className="min-h-screen flex flex-col bg-[#FFF9F0]">
         <ParticleBackground />
         <Header />
         <main className="flex-1 pb-24">

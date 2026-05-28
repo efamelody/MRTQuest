@@ -4,13 +4,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { MRTMap } from '@/components/MRTMap';
 import { SuggestionForm } from '@/components/SuggestionForm';
 import { MissionBoard } from '@/components/MissionBoard';
-import { Lightbulb, PlusCircle } from 'lucide-react';
-
-// import Button from '@/components/Button';
+import { useCountUp } from '@/utils/useCountUp';
+import { MapPin, Award, Flame, PlusCircle, Compass } from 'lucide-react';
 
 const lineTabs = [
-  { id: 'kajang', label: 'Kajang Line' },
-  { id: 'putrajaya', label: 'Putrajaya Line' },
+  { id: 'kajang', label: 'Kajang', emoji: '💚' },
+  { id: 'putrajaya', label: 'Putrajaya', emoji: '💛' },
 ] as const;
 
 type LineId = (typeof lineTabs)[number]['id'];
@@ -36,6 +35,8 @@ const lineMeta: Record<LineId, { label: string; colorClass: string; accentClass:
   },
 };
 
+const EXP_SEGMENTS = 16;
+
 export default function ExplorePage() {
   const [activeLine, setActiveLine] = useState<LineId>('kajang');
   const [stations, setStations] = useState<Station[]>([]);
@@ -53,13 +54,12 @@ export default function ExplorePage() {
         const response = await fetch('/api/stations');
         if (!response.ok) throw new Error('Failed to fetch stations');
         const data = await response.json();
-        
-        // Filter by active line and sort
+
         const lineLabel = lineMeta[activeLine].label;
         const filtered = (data.stations ?? [])
           .filter((s: Station) => s.line === lineLabel)
           .sort((a: Station, b: Station) => (a.sequenceOrder ?? 0) - (b.sequenceOrder ?? 0));
-        
+
         setStations(filtered);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Unknown error');
@@ -89,6 +89,8 @@ export default function ExplorePage() {
         progress: activeCount,
         max: Math.max(totalCount, 1),
         xpReward: 50,
+        code: activeLine === 'kajang' ? 'KG' : 'PY',
+        line: activeLine,
       },
       {
         id: 'photo-hunter',
@@ -97,6 +99,7 @@ export default function ExplorePage() {
         progress: 0,
         max: 1,
         xpReward: 30,
+        line: activeLine,
       },
       {
         id: 'quiz-champion',
@@ -105,39 +108,130 @@ export default function ExplorePage() {
         progress: 0,
         max: 1,
         xpReward: 40,
+        line: activeLine,
       },
     ];
-  }, [stations, activeLineMeta.label]);
+  }, [stations, activeLineMeta.label, activeLine]);
+
+  const activeCount = stations.filter((s) => s.active).length;
+  const animatedActiveCount = useCountUp(activeCount);
+  const animatedTotalCount = useCountUp(stations.length);
+
+  // Mock player progress for the gamified display
+  const playerLevel = 5;
+  const playerExp = 840;
+  const playerExpMax = 1000;
+  const playerStreak = 7;
+  const filledExpSegments = Math.round((playerExp / playerExpMax) * EXP_SEGMENTS);
+
   return (
-    <div className="min-h-screen flex flex-col bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
-      <div className="flex-1 overflow-y-auto pb-20">
-        {/* Header */}
-        <div className="px-6 pt-8 pb-6">
-          <div className="inline-flex rounded-3xl bg-white/80 p-1 shadow-sm border border-white">
-            {lineTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveLine(tab.id)}
-                className={`px-4 py-3 text-sm font-semibold transition-all rounded-3xl ${
-                  activeLine === tab.id
-                    ? 'bg-slate-900 text-white shadow-lg'
-                    : 'text-slate-600 hover:text-slate-800 hover:bg-slate-100'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+    <div className="min-h-screen flex flex-col max-w-lg mx-auto pb-20">
+      <div className="flex-1 overflow-y-auto">
+        {/* ── Hero Section ── */}
+        <div className="px-5 pt-6 pb-4">
+          <div className="flex items-start justify-between mb-5">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <Compass className="w-5 h-5 text-[#0D9488]" />
+                <h1 className="font-gamified text-2xl text-[#2D3250] leading-none">
+                  Explore Kuala Lumpur
+                </h1>
+              </div>
+              <p className="text-sm text-[#8B7E74] mt-1">
+                Discover hidden attractions along the MRT lines
+              </p>
+            </div>
+            <div className="bg-white rounded-xl border-2 border-[#E8E0D6] px-3 py-2 text-center min-w-[72px] shadow-sm">
+              <div className="font-fredoka text-lg leading-none text-[#0D9488]">Lv.{playerLevel}</div>
+              <div className="text-[9px] text-[#8B7E74] uppercase tracking-wider mt-0.5">Level</div>
+            </div>
+          </div>
+
+          {/* ── Player Progress Card ── */}
+          <div className="bg-white rounded-2xl border-2 border-[#E8E0D6] p-4 shadow-[0_4px_16px_rgba(45,50,80,0.06)]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="font-fredoka text-xs text-[#8B7E74]">EXP Progress</span>
+              <span className="font-fredoka text-xs text-[#0D9488]">{playerExp} / {playerExpMax}</span>
+            </div>
+            <div className="flex gap-1 mb-2">
+              {Array.from({ length: EXP_SEGMENTS }).map((_, i) => (
+                <div
+                  key={i}
+                  className="flex-1 h-3 rounded-sm transition-all duration-500"
+                  style={{
+                    background: i < filledExpSegments
+                      ? i === filledExpSegments - 1
+                        ? 'linear-gradient(180deg, #10B981, #059669)'
+                        : 'linear-gradient(180deg, #0D9488, #0F766E)'
+                      : '#E8E0D6',
+                    boxShadow: i < filledExpSegments
+                      ? `0 0 6px ${i === filledExpSegments - 1 ? 'rgba(16,185,129,0.5)' : 'rgba(13,148,136,0.4)'}`
+                      : 'none',
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-fredoka text-[10px] text-[#8B7E74]">Lv.{playerLevel}</span>
+              <span className="font-fredoka text-[10px] text-[#8B7E74]">
+                Lv.{playerLevel + 1} ▸ {playerExpMax - playerExp} XP to go
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* Active Missions */}
-        <div className="px-6 pb-6">
-          <MissionBoard missions={missions} />
+        {/* ── Stats Grid ── */}
+        <div className="px-5 pb-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="stat-card">
+              <MapPin className="w-5 h-5 mx-auto mb-1 text-[#0D9488]" />
+              <div className="stat-card-value text-[#0D9488]">{animatedTotalCount}</div>
+              <div className="stat-card-label">Stations</div>
+            </div>
+            <div className="stat-card">
+              <Award className="w-5 h-5 mx-auto mb-1 text-[#FFB300]" />
+              <div className="stat-card-value text-[#FFB300]">{0}</div>
+              <div className="stat-card-label">Badges</div>
+            </div>
+            <div className="stat-card">
+              <Flame className="w-5 h-5 mx-auto mb-1 text-[#FF6B6B]" />
+              <div className="stat-card-value text-[#FF6B6B]">{playerStreak}</div>
+              <div className="stat-card-label">Streak</div>
+            </div>
+          </div>
         </div>
 
-        {/* MRT Map */}
-        <div className="px-4">
+        {/* ── Line Selector ── */}
+        <div className="px-5 pb-4">
+          <div className="section-divider mb-3">
+            <span>Select Line</span>
+          </div>
+          <div className="flex gap-2">
+            {lineTabs.map((tab) => {
+              const isActive = activeLine === tab.id;
+              const lineColor = tab.id === 'kajang' ? '#0D9488' : '#FFB300';
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveLine(tab.id)}
+                  className="flex-1 font-fredoka text-sm py-2.5 rounded-xl transition-all"
+                  style={{
+                    background: isActive ? lineColor : '#FFFFFF',
+                    color: isActive ? '#FFFFFF' : '#8B7E74',
+                    border: `2px solid ${isActive ? lineColor : '#E8E0D6'}`,
+                    boxShadow: isActive ? `0 4px 12px ${lineColor}40` : 'none',
+                  }}
+                >
+                  {tab.emoji} {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* ── MRT Map ── */}
+        <div className="px-5 pb-4">
           <MRTMap
             selectedLine={activeLine}
             stations={filteredStations}
@@ -148,21 +242,29 @@ export default function ExplorePage() {
             onToggle={setIsActiveOnly}
           />
           {isLoading && (
-            <p className="mt-4 text-sm text-slate-500">Loading stations…</p>
+            <p className="mt-3 text-sm text-[#8B7E74] text-center font-fredoka">Loading stations...</p>
           )}
           {error && (
-            <p className="mt-4 text-sm text-red-600">Unable to load stations: {error}</p>
+            <p className="mt-3 text-sm text-[#DC2626] text-center">{error}</p>
           )}
         </div>
 
-        {/* Suggestion Button */}
-        <div className="justify-end px-6 mt-6 pb-4">
+        {/* ── Active Missions ── */}
+        <div className="px-5 pb-4">
+          <div className="section-divider mb-3">
+            <span>Active Missions</span>
+          </div>
+          <MissionBoard missions={missions} />
+        </div>
+
+        {/* ── Suggestion Button ── */}
+        <div className="px-5 pb-6">
           <button
             onClick={() => setIsSuggestionFormOpen(true)}
-            className="ml-auto flex-1 mt-6 border-2 border-dashed border-slate-300 bg-white/40 p-4 rounded-2xl flex items-center justify-center gap-2 text-slate-500 hover:border-primary hover:text-primary transition-all active:scale-95"
+            className="w-full rounded-2xl border-2 border-dashed border-[#D4CCC2] bg-white/60 p-4 flex items-center justify-center gap-2 text-[#8B7E74] hover:border-[#0D9488] hover:text-[#0D9488] transition-all active:scale-95"
           >
             <PlusCircle className="w-5 h-5" />
-            <span className="font-semibold">Suggest a hidden gem</span>
+            <span className="font-fredoka text-sm">Suggest a hidden gem</span>
           </button>
         </div>
       </div>
@@ -172,7 +274,6 @@ export default function ExplorePage() {
         isOpen={isSuggestionFormOpen}
         onClose={() => setIsSuggestionFormOpen(false)}
         onSuccess={() => {
-          // Refresh stations list after successful suggestion
           setActiveLine(activeLine);
         }}
       />

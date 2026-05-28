@@ -31,15 +31,16 @@ export function ParticleBackground() {
     resize();
     window.addEventListener('resize', resize);
 
-    const count = Math.min(30, Math.floor(window.innerWidth / 40));
+    const count = Math.min(20, Math.floor(window.innerWidth / 50));
+    const hues = [170, 45, 10, 35];
     particlesRef.current = Array.from({ length: count }, () => ({
       x: Math.random() * canvas.width,
       y: Math.random() * canvas.height,
-      size: Math.random() * 3 + 1,
-      speedX: (Math.random() - 0.5) * 0.3,
-      speedY: (Math.random() - 0.5) * 0.3,
-      opacity: Math.random() * 0.4 + 0.1,
-      hue: Math.random() > 0.5 ? 150 : 45,
+      size: Math.random() * 2.5 + 0.5,
+      speedX: (Math.random() - 0.5) * 0.2,
+      speedY: (Math.random() - 0.5) * 0.2,
+      opacity: Math.random() * 0.25 + 0.05,
+      hue: hues[Math.floor(Math.random() * hues.length)],
     }));
 
     const animate = () => {
