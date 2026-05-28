@@ -25,7 +25,7 @@ export function TabBar() {
             className="absolute top-0 h-1 w-12 bg-[#0D9488] rounded-b-full"
             initial={false}
             animate={{
-              x: `calc(${activeIndex * (100 / tabs.length)}% + ${50 / tabs.length}% - 1.5rem)`,
+              left: `calc(${(activeIndex + 0.5) * (100 / tabs.length)}% - 1.5rem)`,
             }}
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
           />
