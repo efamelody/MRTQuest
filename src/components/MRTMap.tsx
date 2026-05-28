@@ -76,11 +76,11 @@ export function MRTMap({ selectedLine, stations, lineLabel, isActiveOnly, onTogg
   const activeCount = stations.filter((s) => s.active).length;
 
   return (
-    <div className="bg-white rounded-2xl border-2 border-[#E8E0D6] shadow-[0_4px_16px_rgba(45,50,80,0.06)] overflow-hidden">
+    <div className="bg-white rounded-2xl border-[1.5px] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
       {/* ── Header with shimmer ── */}
       <div
-        className="px-5 py-4 flex items-center justify-between border-b-2"
-        style={{ borderColor: meta.border, background: meta.bg }}
+        className="px-5 py-4 flex items-center justify-between border-b-[1.5px] border-[#0F172A]"
+        style={{ background: meta.bg }}
       >
         <div className="flex items-center gap-3">
           <div
@@ -122,7 +122,7 @@ export function MRTMap({ selectedLine, stations, lineLabel, isActiveOnly, onTogg
           <div className="relative">
             {/* Vertical track line */}
             <div
-              className="absolute left-[18px] top-3 bottom-3 w-[3px] rounded-full"
+              className="absolute left-[18px] top-3 bottom-3 w-[5px] rounded-full"
               style={{ background: `linear-gradient(180deg, ${meta.color}80, ${meta.color}40)` }}
             />
 
@@ -157,12 +157,12 @@ export function MRTMap({ selectedLine, stations, lineLabel, isActiveOnly, onTogg
                     <div
                       className="absolute left-[18px] -translate-x-1/2 rounded-full transition-all duration-300"
                       style={{
-                        width: isActive ? '14px' : '10px',
-                        height: isActive ? '14px' : '10px',
+                        width: isActive ? '18px' : '10px',
+                        height: isActive ? '18px' : '10px',
                         background: isActive ? meta.color : '#D4CCC2',
                         border: `2px solid ${isActive ? meta.color : '#D4CCC2'}`,
                         boxShadow: isActive
-                          ? `0 0 0 3px ${meta.bg}, 0 0 12px ${meta.glow}`
+                          ? `0 0 0 4px ${meta.bg}, 0 0 14px ${meta.glow}`
                           : 'none',
                         animation: isActive
                           ? selectedLine === 'kajang'
@@ -171,6 +171,16 @@ export function MRTMap({ selectedLine, stations, lineLabel, isActiveOnly, onTogg
                           : 'none',
                       }}
                     >
+                      {/* Stamped checkpoint inner ring */}
+                      {isActive && (
+                        <div
+                          className="absolute inset-0 rounded-full"
+                          style={{
+                            border: '2px solid rgba(255,255,255,0.75)',
+                            margin: '3px',
+                          }}
+                        />
+                      )}
                       {/* Quest blinking dot */}
                       {isActive && hasQuest && (
                         <div
@@ -234,7 +244,7 @@ export function MRTMap({ selectedLine, stations, lineLabel, isActiveOnly, onTogg
       </div>
 
       {/* ── Legend ── */}
-      <div className="px-5 py-3 border-t-2 border-[#E8E0D6] flex items-center gap-4">
+      <div className="px-5 py-3 border-t-[1.5px] border-[#0F172A] flex items-center gap-4">
         <div className="flex items-center gap-1.5">
           <div
             className="w-2.5 h-2.5 rounded-full"

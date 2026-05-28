@@ -218,15 +218,15 @@ h2, h3, .nav-link {
 
 .gamified-card {
   background: var(--card);
-  border: 2px solid var(--border);
+  border: 1.5px solid #0F172A;
   border-radius: var(--radius-lg);
-  box-shadow: 0 4px 16px rgba(45, 50, 80, 0.06), 0 1px 3px rgba(45, 50, 80, 0.04);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 3px 3px 0px 0px rgba(15, 23, 42, 1);
+  transition: transform 0.15s, box-shadow 0.15s;
 }
 
 .gamified-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(45, 50, 80, 0.1), 0 2px 6px rgba(45, 50, 80, 0.06);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px rgba(15, 23, 42, 1);
 }
 
 /* ── Line Color Variants ── */
@@ -268,32 +268,21 @@ h2, h3, .nav-link {
   border: 1px solid rgba(255, 179, 0, 0.3);
 }
 
-/* ── EXP Bar ── */
+/* ── Arcade EXP Bar (solid block) ── */
 
-.exp-bar {
-  display: flex;
-  gap: 3px;
+.arcade-exp-bar {
   height: 12px;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--muted);
-}
-
-.exp-bar-segment {
-  flex: 1;
   border-radius: 2px;
-  background: var(--border);
-  transition: background 0.3s, box-shadow 0.3s;
+  background: #E8E0D6;
+  overflow: hidden;
 }
 
-.exp-bar-segment.filled {
-  background: linear-gradient(180deg, #0D9488, #0F766E);
-  box-shadow: 0 0 6px rgba(13, 148, 136, 0.4);
-}
-
-.exp-bar-segment.filled-last {
-  background: linear-gradient(180deg, #10B981, #059669);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+.arcade-exp-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+  background: linear-gradient(90deg, #0D9488, #10B981);
+  box-shadow: 0 0 8px rgba(13, 148, 136, 0.5);
 }
 
 /* ── Progress Block ── */
@@ -320,11 +309,17 @@ h2, h3, .nav-link {
 
 .stat-card {
   background: var(--card);
-  border: 2px solid var(--border);
+  border: 1.5px solid #0F172A;
   border-radius: var(--radius-lg);
   padding: 1rem;
   text-align: center;
-  box-shadow: 0 4px 12px rgba(45, 50, 80, 0.05);
+  box-shadow: 3px 3px 0px 0px rgba(15, 23, 42, 1);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.stat-card:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0px 0px rgba(15, 23, 42, 1);
 }
 
 .stat-card-value {

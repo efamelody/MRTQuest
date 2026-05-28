@@ -20,14 +20,19 @@ export async function GET(request: NextRequest) {
       prisma.review.count({ where: { userId } }),
       // Count user's earned badges (filtered by userId)
       prisma.userBadge.count({ where: { userId } }),
-      // Get 3 most recent visits with attraction details (filtered by userId)
+      // Get 3 most recent visits with attraction & station line (filtered by userId)
       prisma.visit.findMany({
         where: { userId },  // ← userId filter
         select: {
           id: true,
           visitedAt: true,
           attraction: {
-            select: { name: true },
+            select: {
+              name: true,
+              station: {
+                select: { line: true },
+              },
+            },
           },
         },
         orderBy: { visitedAt: 'desc' },
@@ -55,9 +60,10 @@ export async function GET(request: NextRequest) {
       visitCount: visits,
       reviewCount: reviews,
       badgeCount: badges,
-      recentVisits: recentVisits.map((visit: { id: string; visitedAt: Date; attraction: { name: string } | null }) => ({
+      recentVisits: recentVisits.map((visit: { id: string; visitedAt: Date; attraction: { name: string; station: { line: string } | null } | null }) => ({
         id: visit.id,
         name: visit.attraction?.name ?? 'Unknown location',
+        line: visit.attraction?.station?.line ?? null,
         visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
           day: '2-digit',
           month: 'short',

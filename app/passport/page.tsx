@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Award, Clock3, LogOut, MapPin, Sparkles, Star, UserCircle2, Loader2 } from 'lucide-react';
+import { Award, Clock3, LogOut, MapPin, UserCircle2, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/utils/auth-client';
 import { useCountUp } from '@/utils/useCountUp';
@@ -17,7 +17,7 @@ type RecentVisit = {
   id: string;
   name: string;
   visitedAt: string;
-  rating: number;
+  line: string | null;
 };
 
 export default function PassportPage() {
@@ -100,7 +100,7 @@ export default function PassportPage() {
 
   if (isSessionLoading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto flex items-center justify-center">
+      <div className="min-h-screen bg-[#FFF9F0] max-w-lg mx-auto flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-slate-600">Loading your passport...</p>
@@ -110,16 +110,16 @@ export default function PassportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-pink-50 via-purple-50 to-blue-50 max-w-lg mx-auto">
+    <div className="min-h-screen bg-[#FFF9F0] max-w-lg mx-auto">
       <div className="flex min-h-screen flex-col gap-6 px-6 pb-20 pt-6">
-        <section className="rounded-3xl bg-white/75 backdrop-blur-sm border border-white/70 p-6 shadow-sm text-center">
-          <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-full border-4 border-primary bg-slate-100 text-primary">
+        <section className="rounded-2xl bg-white border-[1.5px] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] p-6 text-center hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
+          <div className="mx-auto mb-4 flex h-28 w-28 items-center justify-center rounded-[2px] border-[1.5px] border-[#0F172A] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] bg-white text-[#0D9488]">
             <UserCircle2 className="h-16 w-16" />
           </div>
-          <h1 className="font-gamified text-4xl tracking-tight text-heading">Passport</h1>
+          <h1 className="font-gamified text-4xl tracking-tight text-[#2D3250]">Passport</h1>
           {isAuthenticated && (
             <>
-              <p className="mt-2 text-lg font-bold text-heading">{session?.user?.name || 'Explorer'}</p>
+              <p className="mt-2 text-lg font-bold text-[#2D3250]">{session?.user?.name || 'Explorer'}</p>
               <p className="mt-1 text-sm uppercase tracking-[0.25em] text-slate-500">{rankLabel}</p>
             </>
           )}
@@ -136,10 +136,10 @@ export default function PassportPage() {
               <StatCard label="Day Streak" value={`${animatedStreakDays}d`} icon={Clock3} />
             </section>
 
-            <section className="rounded-3xl bg-white/75 backdrop-blur-sm border border-white/70 p-6 shadow-sm">
+            <section className="rounded-2xl bg-white border-[1.5px] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] p-6 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-gamified text-heading">Recent Stamps</h2>
+                  <h2 className="text-xl font-gamified text-[#2D3250]">Recent Stamps</h2>
                   <p className="text-sm text-slate-500">Your latest city check-ins</p>
                 </div>
                 {isLoading && <span className="text-sm text-slate-500">Refreshing…</span>}
@@ -150,7 +150,7 @@ export default function PassportPage() {
                   <p className="text-sm text-slate-600">Your passport is ready. Tap a station to start collecting stamps.</p>
                 </div>
               ) : (
-                <div className="relative ml-4 pl-6 before:absolute before:left-0 before:top-0 before:h-full before:w-0.5 before:bg-primary/30">
+                <div className="relative ml-4 pl-6 before:absolute before:left-0 before:top-0 before:h-full before:w-[1.5px] before:bg-[#0F172A]/20">
                   <div className="space-y-4">
                     {recentVisits.map((visit) => (
                       <StampItem key={visit.id} visit={visit} />
@@ -160,12 +160,12 @@ export default function PassportPage() {
               )}
             </section>
 
-            <section className="rounded-3xl bg-white/80 backdrop-blur-sm border border-dashed border-slate-300 p-6 text-center shadow-sm">
+            <section className="rounded-2xl bg-white border-[1.5px] border-dashed border-[#0F172A] p-6 text-center shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]">
               <p className="text-sm text-slate-600 mb-4">Ready to close your passport for the day?</p>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="inline-flex items-center justify-center gap-2 rounded-3xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-300 hover:text-primary"
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border-[1.5px] border-[#0F172A] bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-[2px_2px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] transition-all"
               >
                 <LogOut className="h-4 w-4" />
                 Logout of Quest
@@ -173,13 +173,13 @@ export default function PassportPage() {
             </section>
           </>
         ) : (
-          <section className="rounded-3xl bg-white/80 backdrop-blur-sm border border-dashed border-slate-300 p-6 text-center shadow-sm">
-            <h3 className="text-lg font-semibold text-heading mb-2">Join the Quest</h3>
+          <section className="rounded-2xl bg-white border-[1.5px] border-dashed border-[#0F172A] p-6 text-center shadow-[3px_3px_0px_0px_rgba(15,23,42,1)]">
+            <h3 className="text-lg font-semibold text-[#2D3250] mb-2">Join the Quest</h3>
             <p className="text-sm text-slate-600 mb-4">Sign in to save your stamps, unlock badges, and earn heritage points.</p>
             <button
               type="button"
               onClick={() => router.push('/login')}
-              className="w-full rounded-3xl bg-primary px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-600"
+              className="w-full rounded-2xl bg-[#0D9488] px-5 py-3 text-sm font-semibold text-white shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all border-[1.5px] border-[#0F172A]"
             >
               Create your boarding pass
             </button>
@@ -206,35 +206,54 @@ function StatCard({
   icon: typeof MapPin;
 }) {
   return (
-    <div className="rounded-3xl bg-white/80 backdrop-blur-sm border border-white/70 p-4 shadow-sm">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
+    <div className="rounded-2xl bg-white border-[1.5px] border-[#0F172A] shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] p-4 hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0D9488]/10 text-[#0D9488] mb-3">
         <Icon className="h-5 w-5" />
       </div>
-      <p className="text-2xl font-bold text-heading">{value}</p>
+      <p className="text-2xl font-bold text-[#2D3250]">{value}</p>
       <p className="mt-1 text-[11px] uppercase tracking-[0.32em] text-slate-500">{label}</p>
     </div>
   );
 }
 
 function StampItem({ visit }: { visit: RecentVisit }) {
+  const isKajang = visit.line?.toLowerCase().includes('kajang') ?? false;
+  const lineColor = isKajang ? '#0D9488' : '#FFB300';
+  const lineLabel = isKajang ? 'KJ' : 'PY';
+  const rotation = visit.id.charCodeAt(0) % 2 === 0 ? 'rotate-1' : '-rotate-1';
+
   return (
-    <div className="relative rounded-3xl border border-slate-200 bg-slate-50/80 p-4 shadow-sm">
-      <div className="absolute -left-3 top-4 h-6 w-6 rounded-full bg-primary text-white flex items-center justify-center text-[10px] font-bold">
-        ST
+    <div className={`relative rounded-2xl border-[1.5px] border-[#0F172A] bg-white shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] p-4 transition-all hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] ${rotation}`}>
+      <div
+        className="absolute -left-3 top-4 h-6 w-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
+        style={{ background: lineColor }}
+      >
+        {lineLabel}
       </div>
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-semibold text-heading">{visit.name}</p>
+          <p className="text-sm font-semibold text-[#2D3250]">{visit.name}</p>
           <p className="mt-1 text-xs uppercase tracking-[0.24em] text-slate-500">Stamp collected</p>
         </div>
-        <div className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600">
+        <div className="rounded-full border border-[#0F172A] bg-white px-3 py-1 text-[11px] font-semibold uppercase text-slate-600 shadow-[1px_1px_0px_0px_rgba(15,23,42,1)]">
           {visit.visitedAt}
         </div>
       </div>
-      <div className="mt-4 flex items-center gap-1 text-amber-500">
-        {[...Array(5)].map((_, index) => (
-          <Star key={index} className="h-4 w-4" />
-        ))}
+      <div className="mt-3 flex items-center gap-2">
+        <span
+          className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-bold"
+          style={{
+            color: lineColor,
+            background: `${lineColor}15`,
+            border: `1px solid ${lineColor}30`,
+          }}
+        >
+          <span
+            className="w-1.5 h-1.5 rounded-full"
+            style={{ background: lineColor }}
+          />
+          {isKajang ? 'Kajang Line' : 'Putrajaya Line'}
+        </span>
       </div>
     </div>
   );
