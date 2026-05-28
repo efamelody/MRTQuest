@@ -94,18 +94,18 @@ export function SuggestionForm({ isOpen, onClose, onSuccess }: SuggestionFormPro
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full sm:max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-2xl w-full sm:max-w-md border-[1.5px] border-[#0F172A] shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-linear-to-r from-purple-400 to-pink-400 p-6 flex items-center justify-between rounded-t-3xl">
+        <div className="sticky top-0 bg-[#0D9488] p-5 flex items-center justify-between border-b-[1.5px] border-[#0F172A]">
           <div className="flex items-center gap-3">
-            <Lightbulb className="w-6 h-6 text-white" />
-            <h2 className="text-xl font-bold text-white">Suggest an Attraction</h2>
+            <Lightbulb className="w-5 h-5 text-white" />
+            <h2 className="text-lg font-fredoka font-bold text-white">Suggest an Attraction</h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-white/20 rounded-full transition"
+            className="p-1.5 hover:bg-white/20 rounded-none transition border border-white/40"
           >
-            <X className="w-5 h-5 text-white" />
+            <X className="w-4 h-4 text-white" />
           </button>
         </div>
 
@@ -113,21 +113,21 @@ export function SuggestionForm({ isOpen, onClose, onSuccess }: SuggestionFormPro
         <form onSubmit={handleSubmit} className="p-6 space-y-5">
           {/* Success Message */}
           {success && (
-            <div className="bg-green-100 border-2 border-green-400 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">
+            <div className="bg-emerald-50 border-[1.5px] border-[#0F172A] text-emerald-700 px-4 py-3 rounded-none text-sm font-medium shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
               ✓ Thanks for the suggestion! Our team will review it soon.
             </div>
           )}
 
           {/* Error Message */}
           {error && (
-            <div className="bg-red-100 border-2 border-red-400 text-red-700 px-4 py-3 rounded-xl text-sm font-medium">
+            <div className="bg-red-50 border-[1.5px] border-[#0F172A] text-red-700 px-4 py-3 rounded-none text-sm font-medium shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
               {error}
             </div>
           )}
 
           {/* Attraction Name */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-sm font-fredoka text-[#2D3250] mb-2">
               Attraction Name
             </label>
             <input
@@ -135,35 +135,35 @@ export function SuggestionForm({ isOpen, onClose, onSuccess }: SuggestionFormPro
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Hidden Rooftop Cafe"
-              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-purple-400 transition placeholder:text-slate-400"
+              className="w-full px-4 py-3 border-[1.5px] border-[#0F172A] rounded-none focus:outline-none focus:ring-2 focus:ring-[#0D9488] transition placeholder:text-[#8B7E74] bg-white"
               disabled={loading}
             />
           </div>
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-sm font-fredoka text-[#2D3250] mb-2">
               Description
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What makes this place special? (e.g., best views, unique local vibe, instagrammable spots)"
+              placeholder="What makes this place special?"
               rows={4}
-              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-purple-400 transition placeholder:text-slate-400 resize-none"
+              className="w-full px-4 py-3 border-[1.5px] border-[#0F172A] rounded-none focus:outline-none focus:ring-2 focus:ring-[#0D9488] transition placeholder:text-[#8B7E74] resize-none bg-white"
               disabled={loading}
             />
           </div>
 
           {/* Station/Category */}
           <div>
-            <label className="block text-sm font-semibold text-slate-700 mb-2">
+            <label className="block text-sm font-fredoka text-[#2D3250] mb-2">
               Station / Category
             </label>
             <select
               value={stationId}
               onChange={(e) => setStationId(e.target.value)}
-              className="w-full px-4 py-3 border-2 border-slate-200 rounded-xl focus:outline-none focus:border-purple-400 transition text-slate-700 bg-white"
+              className="w-full px-4 py-3 border-[1.5px] border-[#0F172A] rounded-none focus:outline-none focus:ring-2 focus:ring-[#0D9488] transition text-[#2D3250] bg-white"
               disabled={loading}
             >
               <option value="">-- Select a station --</option>
@@ -179,17 +179,17 @@ export function SuggestionForm({ isOpen, onClose, onSuccess }: SuggestionFormPro
           <button
             type="submit"
             disabled={loading || success}
-            className={`w-full py-3 rounded-xl font-semibold text-white transition ${
+            className={`w-full py-3 rounded-none font-fredoka font-bold text-white transition-all border-[1.5px] border-[#0F172A] border-b-[4px] active:border-b-0 active:translate-y-[4px] ${
               loading || success
-                ? 'bg-slate-400 cursor-not-allowed'
-                : 'bg-linear-to-r from-purple-500 to-pink-500 hover:shadow-lg active:scale-95'
+                ? 'bg-slate-400 cursor-not-allowed opacity-60'
+                : 'bg-[#0D9488] hover:bg-[#0F766E]'
             }`}
           >
             {loading ? 'Submitting...' : success ? '✓ Submitted!' : 'Submit Suggestion'}
           </button>
 
           {/* Info Text */}
-          <p className="text-xs text-slate-500 text-center">
+          <p className="text-xs text-[#8B7E74] text-center font-fredoka">
             Your suggestion will be reviewed by our team before being added to the app.
           </p>
         </form>
