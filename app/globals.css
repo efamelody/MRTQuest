@@ -1,51 +1,72 @@
 @import "tailwindcss";
 
-
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #FFF9F0;
+  --foreground: #2D3250;
+  --card: #FFFFFF;
+  --card-foreground: #2D3250;
+  --primary: #0D9488;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FFB300;
+  --secondary-foreground: #FFFFFF;
+  --accent: #FF6B6B;
+  --accent-foreground: #FFFFFF;
+  --muted: #F5F0EB;
+  --muted-foreground: #8B7E74;
+  --success: #10B981;
+  --success-foreground: #FFFFFF;
+  --destructive: #DC2626;
+  --destructive-foreground: #FFFFFF;
+  --border: #E8E0D6;
+  --ring: #0D9488;
+  --radius: 1rem;
+
   --font-fredoka: var(--font-fredoka);
   --font-outfit: var(--font-outfit);
-  
-  /* Brand Colors */
-  --color-brand-green: #00A959;
-  --color-brand-yellow: #FFD520;
-  --color-brand-heading: #064E3B;
-  
-  /* Semantic Colors */
-  --color-primary: #00A959;
-  --color-accent: #FFD520;
-  --color-heading: #2D3250;
-  --color-card-bg: rgba(255, 255, 255, 0.7);
-  --color-modal-backdrop: rgba(15, 23, 42, 0.7);
-  --color-success: #00A959;
-  
-  /* Safe Area */
+  --font-quicksand: var(--font-quicksand);
+  --font-lilita-one: var(--font-lilita-one);
+
+  --color-brand-teal: #0D9488;
+  --color-brand-gold: #FFB300;
+  --color-brand-coral: #FF6B6B;
+  --color-brand-cream: #FFF9F0;
+  --color-brand-warm-dark: #2D3250;
+  --color-brand-warm-gray: #8B7E74;
+
   --safe-area-bottom: env(safe-area-inset-bottom);
 }
 
 @theme inline {
-  --color-primary: var(--color-primary);
-  --color-accent: var(--color-accent);
-  --color-heading: var(--color-heading);
-  --color-brand-green: var(--color-brand-green);
-  --color-brand-yellow: var(--color-brand-yellow);
-  --color-brand-heading: var(--color-brand-heading);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-fredoka: var(--font-fredoka);
-  --font-outfit: var(--font-outfit);
-  --font-lilita-one: var(--font-lilita-one);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-success: var(--success);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --color-brand-teal: var(--color-brand-teal);
+  --color-brand-gold: var(--color-brand-gold);
+  --color-brand-coral: var(--color-brand-coral);
+  --color-brand-cream: var(--color-brand-cream);
+  --color-brand-warm-dark: var(--color-brand-warm-dark);
+  --color-brand-warm-gray: var(--color-brand-warm-gray);
   --font-sans: var(--font-quicksand);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    /* --background: #0a0a0a; */
-    --foreground: #ededed;
-  }
+  --font-fredoka: var(--font-fredoka);
+  --font-lilita-one: var(--font-lilita-one);
+  --radius-sm: calc(var(--radius) - 6px);
+  --radius-md: calc(var(--radius) - 4px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
 }
 
 html,
@@ -57,21 +78,46 @@ body {
   color: var(--foreground);
 }
 
-h1, .text-hero {
-  font-family: var(--font-lilita), cursive;
-}
+/* ── Gamified Typography ── */
 
 .font-gamified {
-  font-family: var(--font-lilita-one), sans;
+  font-family: var(--font-lilita-one), cursive;
 }
 
-/* Use the cute font for all headings by default */
+.font-fredoka {
+  font-family: var(--font-fredoka), sans-serif;
+}
+
+h1, .text-hero {
+  font-family: var(--font-lilita-one), cursive;
+}
+
 h2, h3, .nav-link {
   font-family: var(--font-quicksand), sans-serif;
   font-weight: 600;
 }
 
-/* Safe Area Padding Utility */
+/* ── Section Divider ── */
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-fredoka), sans-serif;
+  font-size: 0.875rem;
+  color: var(--muted-foreground);
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: "";
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+/* ── Safe Area ── */
 @layer utilities {
   .safe-area-pb {
     padding-bottom: var(--safe-area-bottom);
@@ -86,16 +132,10 @@ h2, h3, .nav-link {
   }
 }
 
-/* Ripple Effect */
+/* ── Ripple Effect ── */
 @keyframes ripple {
-  0% {
-    transform: scale(1);
-    opacity: 0.5;
-  }
-  100% {
-    transform: scale(15);
-    opacity: 0;
-  }
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(15); opacity: 0; }
 }
 
 @layer utilities {
@@ -104,35 +144,297 @@ h2, h3, .nav-link {
   }
 }
 
-/* Celebration Animations */
-@keyframes pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  50% {
-    transform: scale(1.08);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
+/* ── Gamification Animations ── */
+
+@keyframes pop-in {
+  0% { opacity: 0; transform: scale(0.85); }
+  50% { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes highlight-flash {
-  0% {
-    background-color: rgba(253, 224, 71, 0.2);
-  }
-  100% {
-    background-color: rgba(253, 224, 71, 0);
-  }
+@keyframes stamp-appear {
+  0% { transform: scale(0) rotate(-15deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(-5deg); }
+  100% { transform: scale(1) rotate(-3deg); opacity: 1; }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
+}
+
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 8px rgba(13, 148, 136, 0.3); }
+  50% { box-shadow: 0 0 20px rgba(13, 148, 136, 0.6); }
+}
+
+@keyframes progress-fill {
+  0% { width: 0%; }
+}
+
+@keyframes count-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @layer utilities {
-  .animate-pop {
-    animation: pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  .animate-pop-in {
+    animation: pop-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
+  .animate-stamp {
+    animation: stamp-appear 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  .animate-sparkle {
+    animation: sparkle 1.5s ease-in-out infinite;
+  }
+  .animate-slide-up {
+    animation: slide-up 0.4s ease-out;
+  }
+  .animate-bounce-gentle {
+    animation: bounce-gentle 2s ease-in-out infinite;
+  }
+  .animate-glow-pulse {
+    animation: glow-pulse 2s ease-in-out infinite;
+  }
+  .animate-progress {
+    animation: progress-fill 1s ease-out forwards;
+  }
+  .animate-count-up {
+    animation: count-up 0.3s ease-out;
+  }
+}
 
+/* ── Card Styles ── */
+
+.gamified-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 16px rgba(45, 50, 80, 0.06), 0 1px 3px rgba(45, 50, 80, 0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.gamified-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(45, 50, 80, 0.1), 0 2px 6px rgba(45, 50, 80, 0.06);
+}
+
+/* ── Line Color Variants ── */
+
+.line-kajang {
+  --line-color: #0D9488;
+  --line-bg: rgba(13, 148, 136, 0.08);
+  --line-border: rgba(13, 148, 136, 0.25);
+}
+
+.line-putrajaya {
+  --line-color: #FFB300;
+  --line-bg: rgba(255, 179, 0, 0.08);
+  --line-border: rgba(255, 179, 0, 0.25);
+}
+
+/* ── Station Code Pill ── */
+
+.station-code {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-fredoka), sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--radius-sm);
+  line-height: 1.4;
+}
+
+.station-code-kajang {
+  color: #0D9488;
+  background: rgba(13, 148, 136, 0.1);
+  border: 1px solid rgba(13, 148, 136, 0.3);
+}
+
+.station-code-putrajaya {
+  color: #B8860B;
+  background: rgba(255, 179, 0, 0.1);
+  border: 1px solid rgba(255, 179, 0, 0.3);
+}
+
+/* ── EXP Bar ── */
+
+.exp-bar {
+  display: flex;
+  gap: 3px;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--muted);
+}
+
+.exp-bar-segment {
+  flex: 1;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.exp-bar-segment.filled {
+  background: linear-gradient(180deg, #0D9488, #0F766E);
+  box-shadow: 0 0 6px rgba(13, 148, 136, 0.4);
+}
+
+.exp-bar-segment.filled-last {
+  background: linear-gradient(180deg, #10B981, #059669);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+/* ── Progress Block ── */
+
+.progress-track {
+  display: flex;
+  gap: 3px;
+}
+
+.progress-block {
+  flex: 1;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--border);
+  transition: background 0.3s, box-shadow 0.3s;
+}
+
+.progress-block.filled {
+  background: var(--line-color, #0D9488);
+  box-shadow: 0 0 6px var(--line-color, #0D9488);
+}
+
+/* ── Stat Card ── */
+
+.stat-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(45, 50, 80, 0.05);
+}
+
+.stat-card-value {
+  font-family: var(--font-fredoka), sans-serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.stat-card-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+  margin-top: 0.25rem;
+}
+
+/* ── Badge Styles ── */
+
+.badge-earned {
+  border: 2px solid #FFB300;
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.08), rgba(255, 179, 0, 0.02));
+  box-shadow: 0 0 12px rgba(255, 179, 0, 0.2);
+}
+
+.badge-locked {
+  border: 2px dashed var(--border);
+  background: var(--muted);
+  opacity: 0.6;
+}
+
+/* ── Toast / Alert Gamified ── */
+
+.gamified-toast {
+  background: var(--card);
+  border: 2px solid var(--success);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.2);
+}
+
+/* ── Responsive max-width container ── */
+
+.app-container {
+  max-width: 28rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ── Transit Map Creative Effects ── */
+
+@keyframes station-glow-teal {
+  0%, 100% { box-shadow: 0 0 8px rgba(13, 148, 136, 0.3), 0 0 16px rgba(13, 148, 136, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(13, 148, 136, 0.6), 0 0 32px rgba(13, 148, 136, 0.2); }
+}
+
+@keyframes station-glow-gold {
+  0%, 100% { box-shadow: 0 0 8px rgba(255, 179, 0, 0.3), 0 0 16px rgba(255, 179, 0, 0.1); }
+  50% { box-shadow: 0 0 16px rgba(255, 179, 0, 0.6), 0 0 32px rgba(255, 179, 0, 0.2); }
+}
+
+@keyframes header-shimmer-teal {
+  0%, 100% { text-shadow: 0 0 4px rgba(13, 148, 136, 0.2); }
+  50% { text-shadow: 0 0 12px rgba(13, 148, 136, 0.5), 0 0 24px rgba(13, 148, 136, 0.2); }
+}
+
+@keyframes header-shimmer-gold {
+  0%, 100% { text-shadow: 0 0 4px rgba(255, 179, 0, 0.2); }
+  50% { text-shadow: 0 0 12px rgba(255, 179, 0, 0.5), 0 0 24px rgba(255, 179, 0, 0.2); }
+}
+
+@keyframes station-enter {
+  0% { opacity: 0; transform: translateY(20px) scale(0.97); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@layer utilities {
+  .animate-station-glow-teal {
+    animation: station-glow-teal 2.5s ease-in-out infinite;
+  }
+  .animate-station-glow-gold {
+    animation: station-glow-gold 2.5s ease-in-out infinite;
+  }
+  .animate-header-shimmer-teal {
+    animation: header-shimmer-teal 2s ease-in-out infinite;
+  }
+  .animate-header-shimmer-gold {
+    animation: header-shimmer-gold 2s ease-in-out infinite;
+  }
+  .animate-station-enter {
+    animation: station-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+}
+
+/* ── Blinking dot (from design's anim-blink) ── */
+@keyframes blink-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.anim-blink-dot {
+  animation: blink-dot 1s step-end infinite;
+}
+
+/* ── Highlight flash ── */
+@keyframes highlight-flash {
+  0% { background-color: rgba(253, 224, 71, 0.2); }
+  100% { background-color: rgba(253, 224, 71, 0); }
+}
+
+@layer utilities {
   .animate-highlight-flash {
     animation: highlight-flash 0.6s ease-out;
   }
