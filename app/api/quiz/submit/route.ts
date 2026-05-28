@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { evaluateBadges } from '@/utils/badges';
+import { calculateLevel } from '@/utils/gamification';
 
 interface SubmitQuizRequest {
   attractionId: string;
@@ -30,13 +31,6 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = session.user.id;
-
-    // Ensure a profile row exists (profiles FK-references ba_user)
-    await prisma.profile.upsert({
-      where: { id: userId },
-      update: {},
-      create: { id: userId },
-    });
 
     // Parse request body
     const body: SubmitQuizRequest = await request.json();
@@ -79,69 +73,93 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process answers and create records
-    const results: QuizResult[] = [];
-    let totalCorrect = 0;
-    let totalPoints = 0;
+    // Process answers and create records within a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const results: QuizResult[] = [];
+      let totalCorrect = 0;
+      let totalPoints = 0;
 
-    const attemptPromises = quizzes.map(async (quiz: { id: string; question: string; correctAnswer: string; points: number | null }) => {
-      const userAnswer = answers[quiz.id];
+      const attemptPromises = quizzes.map(async (quiz: { id: string; question: string; correctAnswer: string; points: number | null }) => {
+        const userAnswer = answers[quiz.id];
 
-      // If user didn't answer this question, skip it
-      if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
-        return;
-      }
+        // If user didn't answer this question, skip it
+        if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
+          return;
+        }
 
-      // Note: options validation requires running `pnpm prisma generate` first
-      // For now, doing exact string comparison (case-sensitive)
-      // since options come from the same source as correctAnswer
-      const isCorrect = userAnswer === quiz.correctAnswer;
-      const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
+        // Note: options validation requires running `pnpm prisma generate` first
+        // For now, doing exact string comparison (case-sensitive)
+        // since options come from the same source as correctAnswer
+        const isCorrect = userAnswer === quiz.correctAnswer;
+        const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
 
-      if (isCorrect) {
-        totalCorrect++;
-        totalPoints += pointsEarned;
-      }
+        if (isCorrect) {
+          totalCorrect++;
+          totalPoints += pointsEarned;
+        }
 
-      // Upsert so re-attempts overwrite the previous record
-      await prisma.userQuizAttempt.upsert({
-        where: { userId_quizId: { userId, quizId: quiz.id } },
-        update: {
-          isCorrect,
-          answer_provided: userAnswer,
-          points_earned: pointsEarned,
-          attemptedAt: new Date(),
-        },
-        create: {
-          userId,
+        // Upsert so re-attempts overwrite the previous record
+        await tx.userQuizAttempt.upsert({
+          where: { userId_quizId: { userId, quizId: quiz.id } },
+          update: {
+            isCorrect,
+            answer_provided: userAnswer,
+            points_earned: pointsEarned,
+            attemptedAt: new Date(),
+          },
+          create: {
+            userId,
+            quizId: quiz.id,
+            isCorrect,
+            answer_provided: userAnswer,
+            points_earned: pointsEarned,
+          },
+        });
+
+        results.push({
           quizId: quiz.id,
+          question: quiz.question,
+          correctAnswer: quiz.correctAnswer,
+          userAnswer,
           isCorrect,
-          answer_provided: userAnswer,
-          points_earned: pointsEarned,
+          pointsEarned,
+        });
+      });
+
+      await Promise.all(attemptPromises);
+
+      // Ensure profile exists and update XP
+      const profile = await tx.profile.upsert({
+        where: { id: userId },
+        update: {},
+        create: { id: userId },
+        select: { total_xp: true },
+      });
+
+      const xpAward = totalCorrect * 2;
+      const newTotalXp = profile.total_xp + xpAward;
+      const newLevel = calculateLevel(newTotalXp);
+
+      await tx.profile.update({
+        where: { id: userId },
+        data: {
+          total_xp: { increment: xpAward },
+          current_level: { set: newLevel },
         },
       });
 
-      results.push({
-        quizId: quiz.id,
-        question: quiz.question,
-        correctAnswer: quiz.correctAnswer,
-        userAnswer,
-        isCorrect,
-        pointsEarned,
-      });
+      return { results, totalCorrect, totalPoints };
     });
-
-    await Promise.all(attemptPromises);
 
     const newBadges = await evaluateBadges(userId);
 
     return NextResponse.json(
       {
         success: true,
-        totalQuestions: results.length,
-        correctCount: totalCorrect,
-        totalPoints,
-        results,
+        totalQuestions: result.results.length,
+        correctCount: result.totalCorrect,
+        totalPoints: result.totalPoints,
+        results: result.results,
         newBadges,
       },
       { status: 200 }

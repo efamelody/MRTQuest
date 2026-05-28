@@ -6,10 +6,8 @@ import { Sparkles, TrendingUp, Crown, Star, Rocket } from 'lucide-react';
 
 const LEVELS = [
   { level: 1, label: 'City Explorer', minXp: 0, icon: Sparkles, color: 'text-slate-600', bg: 'bg-slate-100', bar: 'bg-slate-400' },
-  { level: 2, label: 'Merdeka Wanderer', minXp: 80, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
-  { level: 3, label: 'Rail Master', minXp: 200, icon: Star, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
-  { level: 4, label: 'Transit Legend', minXp: 400, icon: Crown, color: 'text-purple-600', bg: 'bg-purple-50', bar: 'bg-purple-500' },
-  { level: 5, label: 'MRT Mythic', minXp: 700, icon: Rocket, color: 'text-rose-600', bg: 'bg-rose-50', bar: 'bg-rose-500' },
+  { level: 2, label: 'Merdeka Wanderer', minXp: 101, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500' },
+  { level: 3, label: 'Klang Valley Master', minXp: 301, icon: Rocket, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-500' },
 ];
 
 function getLevel(xp: number) {

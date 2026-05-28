@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
+import { calculateLevel } from '@/utils/gamification';
 import { getDistance } from 'geolib';
 import { GoogleGenAI } from '@google/genai';
 
@@ -70,6 +71,21 @@ export async function POST(request: NextRequest) {
         { error: 'You must check in at this location before verifying a photo.' },
         { status: 403 }
       );
+    }
+
+    // Idempotency: check if photo already verified for this attraction
+    const existingPhoto = await prisma.visit.findFirst({
+      where: { userId, siteId: attractionId, verificationType: 'photo' },
+      select: { id: true },
+    });
+
+    if (existingPhoto) {
+      return NextResponse.json({
+        success: true,
+        visitId: existingPhoto.id,
+        alreadyVerified: true,
+        message: 'Photo already verified for this location.',
+      });
     }
 
     if (!base64Image || typeof base64Image !== 'string') {
@@ -181,22 +197,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create visit record with verified status
-    const visit = await prisma.visit.create({
-      data: {
-        userId,
-        siteId: attractionId,
-        verificationType: 'photo',
-        verifiedAt: new Date(),
-      },
+    // Transaction: create visit + update profile atomically
+    const XP_EARNED = 8;
+    const result = await prisma.$transaction(async (tx) => {
+      const profile = await tx.profile.upsert({
+        where: { id: userId },
+        update: {},
+        create: { id: userId },
+        select: { total_xp: true },
+      });
+
+      const visit = await tx.visit.create({
+        data: {
+          userId,
+          siteId: attractionId,
+          verificationType: 'photo',
+          verifiedAt: new Date(),
+        },
+        select: { id: true },
+      });
+
+      const newTotalXp = profile.total_xp + XP_EARNED;
+      const newLevel = calculateLevel(newTotalXp);
+
+      await tx.profile.update({
+        where: { id: userId },
+        data: {
+          total_xp: { increment: XP_EARNED },
+          current_level: { set: newLevel },
+        },
+      });
+
+      return { visit };
     });
 
     return NextResponse.json(
       {
         success: true,
-        visitId: visit.id,
+        visitId: result.visit.id,
         message: `Check-in verified! ${attraction.name} unlocked.`,
-        pointsAwarded: 8,
+        pointsAwarded: XP_EARNED,
         confidence: geminiResult.confidence,
         reason: geminiResult.reason,
         nearThreshold: false,

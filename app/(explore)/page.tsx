@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MRTMap } from '@/components/MRTMap';
 import { SuggestionForm } from '@/components/SuggestionForm';
 import { MissionBoard } from '@/components/MissionBoard';
 import { useCountUp } from '@/utils/useCountUp';
+import { getLevelInfo } from '@/utils/gamification';
 import { MapPin, Award, Flame, PlusCircle, Compass } from 'lucide-react';
 
 const lineTabs = [
@@ -42,6 +43,24 @@ export default function ExplorePage() {
   const [error, setError] = useState<string | null>(null);
   const [isSuggestionFormOpen, setIsSuggestionFormOpen] = useState(false);
   const [isActiveOnly, setIsActiveOnly] = useState(true);
+  const [profileStats, setProfileStats] = useState({ totalXp: 0, currentStreak: 0, badgeCount: 0 });
+
+  const fetchProfile = useCallback(async () => {
+    try {
+      const res = await fetch('/api/passport');
+      if (!res.ok) return;
+      const data = await res.json();
+      setProfileStats({
+        totalXp: data.totalXp ?? 0,
+        currentStreak: data.currentStreak ?? 0,
+        badgeCount: data.badgeCount ?? 0,
+      });
+    } catch {
+      // Silently fail — page works without profile data
+    }
+  }, []);
+
+  useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   useEffect(() => {
     const fetchStations = async () => {
@@ -115,11 +134,7 @@ export default function ExplorePage() {
   const animatedActiveCount = useCountUp(activeCount);
   const animatedTotalCount = useCountUp(stations.length);
 
-  // Mock player progress for the gamified display
-  const playerLevel = 5;
-  const playerExp = 840;
-  const playerExpMax = 1000;
-  const playerStreak = 7;
+  const levelInfo = useMemo(() => getLevelInfo(profileStats.totalXp), [profileStats.totalXp]);
   return (
     <div className="min-h-screen flex flex-col max-w-lg mx-auto pb-20">
       <div className="flex-1 overflow-y-auto">
@@ -138,7 +153,7 @@ export default function ExplorePage() {
               </p>
             </div>
             <div className="bg-white rounded-xl border-[1.5px] border-[#0F172A] px-3 py-2 text-center min-w-[72px] shadow-[2px_2px_0px_0px_rgba(15,23,42,1)]">
-              <div className="font-fredoka text-lg leading-none text-[#0D9488]">Lv.{playerLevel}</div>
+              <div className="font-fredoka text-lg leading-none text-[#0D9488]">Lv.{levelInfo.level}</div>
               <div className="text-[9px] text-[#8B7E74] uppercase tracking-wider mt-0.5">Level</div>
             </div>
           </div>
@@ -147,18 +162,21 @@ export default function ExplorePage() {
           <div className="bg-white rounded-2xl border-[1.5px] border-[#0F172A] p-4 shadow-[3px_3px_0px_0px_rgba(15,23,42,1)] hover:-translate-x-[1px] hover:-translate-y-[1px] hover:shadow-[4px_4px_0px_0px_rgba(15,23,42,1)] transition-all">
             <div className="flex items-center justify-between mb-2">
               <span className="font-fredoka text-xs text-[#8B7E74]">EXP Progress</span>
-              <span className="font-fredoka text-xs text-[#0D9488]">{playerExp} / {playerExpMax}</span>
+              <span className="font-fredoka text-xs text-[#0D9488]">{profileStats.totalXp} XP</span>
             </div>
             <div className="arcade-exp-bar mb-2">
               <div
                 className="arcade-exp-bar-fill"
-                style={{ width: `${(playerExp / playerExpMax) * 100}%` }}
+                style={{ width: `${levelInfo.isMaxLevel ? 100 : (levelInfo.xpInLevel / levelInfo.xpRange) * 100}%` }}
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-fredoka text-[10px] text-[#8B7E74]">Lv.{playerLevel}</span>
+              <span className="font-fredoka text-[10px] text-[#8B7E74]">Lv.{levelInfo.level}</span>
               <span className="font-fredoka text-[10px] text-[#8B7E74]">
-                Lv.{playerLevel + 1} ▸ {playerExpMax - playerExp} XP to go
+                {levelInfo.isMaxLevel
+                  ? <span className="text-[#0D9488]">Max Level</span>
+                  : <>Lv.{levelInfo.level + 1} ▸ {levelInfo.xpToNext} XP to go</>
+                }
               </span>
             </div>
           </div>
@@ -174,12 +192,12 @@ export default function ExplorePage() {
             </div>
             <div className="stat-card">
               <Award className="w-5 h-5 mx-auto mb-1 text-[#FFB300]" />
-              <div className="stat-card-value text-[#FFB300]">{0}</div>
+              <div className="stat-card-value text-[#FFB300]">{profileStats.badgeCount}</div>
               <div className="stat-card-label">Badges</div>
             </div>
             <div className="stat-card">
               <Flame className="w-5 h-5 mx-auto mb-1 text-[#FF6B6B]" />
-              <div className="stat-card-value text-[#FF6B6B]">{playerStreak}</div>
+              <div className="stat-card-value text-[#FF6B6B]">{profileStats.currentStreak}</div>
               <div className="stat-card-label">Streak</div>
             </div>
           </div>

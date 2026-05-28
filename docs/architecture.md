@@ -24,6 +24,7 @@ User (ba_user)
   ├── Account (ba_account)          [OAuth provider link]
   ├── Session (ba_session)          [Session tokens]
   └── Profile (1:1 FK on profiles.id)
+        ├── totalXp, currentLevel, currentStreak, lastVisitDate  ← gamification state-cache
         ├── Visit (1:many)
         ├── Review (1:many)
         ├── UserBadge (1:many)
@@ -58,7 +59,7 @@ Badge
 | `ba_session` | `Session` | Session tokens. One per login. | Auth |
 | `ba_account` | `Account` | OAuth provider accounts (Google, etc.). | Auth |
 | `ba_verification` | `Verification` | Email verification OTPs. | Auth |
-| `profiles` | `Profile` | App-specific user data (`username`, `avatar_url`). FK → `ba_user.id`. | Data |
+| `profiles` | `Profile` | App-specific user data + gamification state (`username`, `avatar_url`, `total_xp`, `current_level`, `current_streak`, `last_visit_date`). FK → `ba_user.id`. | Data |
 | `stations` | `Station` | MRT stations on Kajang/Putrajaya lines. `active` flag gates visibility. | Reference |
 | `attractions` | `Attraction` | Points of interest per station. Links to quizzes, reviews, visits. | Reference |
 | `visits` | `Visit` | Immutable check-in log: `(user_id, site_id, verification_type)`. | User Data |
@@ -158,7 +159,7 @@ Components that opt into the browser runtime with `'use client'`:
 
 ## API Route Authentication & Mutation Pattern
 
-### Typical Flow: Check-in Request
+### Typical Flow: Check-in Request (with Gamification)
 
 ```
 Browser (Client Component)
@@ -168,30 +169,45 @@ Browser (Client Component)
 app/api/visits/checkin/route.ts
   │
   ├── const session = await auth.api.getSession({ headers })  ← Extract user
-  │     └── Throws 401 if missing
+  │     └── 401 if missing
   │
   ├── const userId = session.user.id
   │
-  ├── Ensure profile exists:
-  │     await prisma.profile.upsert({
-  │       where: { id: userId },
-  │       create: { id: userId },  ← FK links to ba_user.id
-  │     })
-  │
-  ├── Check for duplicate visits (prevent double check-ins):
+  ├── Idempotency check (scoped to verificationType):
   │     const existing = await prisma.visit.findFirst({
-  │       where: { userId, siteId: attractionId }
+  │       where: { userId, siteId: attractionId, verificationType: 'geofence' }
   │     })
+  │     if (existing) → return { alreadyCheckedIn: true }     ← no duplicate row
   │
-  ├── Create visit record:
-  │     const visit = await prisma.visit.create({
-  │       data: { userId, siteId: attractionId, verificationType: 'geofence' }
-  │     })
+  ├── prisma.$transaction(async (tx) => {                     ← atomic transaction
+  │     ├── tx.profile.upsert({ where: { id: userId }, ... })  ← ensure profile
+  │     │
+  │     ├── Streak algorithm (reads last_visit_date from profile):
+  │     │     same day → no change
+  │     │     next day → streak + 1
+  │     │     gap > 1  → streak = 1
+  │     │     null     → streak = 1
+  │     │
+  │     ├── tx.visit.create({                                    ← visit record
+  │     │     data: { userId, siteId, verificationType: 'geofence' }
+  │     │   })
+  │     │
+  │     ├── const newLevel = calculateLevel(profile.totalXp + 5)
+  │     │
+  │     └── tx.profile.update({                                 ← gamification state
+  │           data: {
+  │             total_xp:        { increment: 5 },
+  │             current_level:   { set: newLevel },
+  │             current_streak:  { set: newStreak },
+  │             last_visit_date: { set: now },
+  │           }
+  │         })
+  │   })
   │
-  ├── Evaluate badges (async, not awaited for speed):
+  ├── Evaluate badges (post-action):
   │     const newBadges = await evaluateBadges(userId)
   │
-  └── NextResponse.json({ visitId, newBadges })
+  └── NextResponse.json({ visitId, alreadyCheckedIn: false, newBadges })
 ```
 
 [Full example: app/api/visits/checkin/route.ts](app/api/visits/checkin/route.ts)
@@ -216,6 +232,56 @@ app/api/visits/checkin/route.ts
 | **Client Component** | `import { createClient } from '@/utils/supabase/client'` | Browser-side reads only (no mutations) |
 | **API Route (mutations)** | `import { prisma } from '@/utils/prisma'` | Create visits, quiz attempts, badges |
 | **API Route (complex reads)** | `import { prisma } from '@/utils/prisma'` | Complex queries with user data |
+
+---
+
+## Gamification Engine
+
+The gamification system uses a **state-cache progression model** where the `profiles` table serves as the read-model projection of a user's XP, level, and streak. Every mutating action atomically updates this cache inside a Prisma `$transaction`.
+
+### XP Award Schedule
+
+| Action | XP | Transaction Scope |
+|---|---|---|
+| `POST /api/visits/checkin` (geofence) | `+5` | Inside `$transaction` alongside visit creation and streak update |
+| `POST /api/visits/verify-photo` (Gemini) | `+8` | Inside `$transaction` alongside visit creation |
+| `POST /api/quiz/submit` (per correct answer) | `+2` per answer | Inside `$transaction` alongside quiz attempt upserts |
+
+### Level Progression (`src/utils/gamification.ts`)
+
+A hardcoded bracket function maps `total_xp` to `current_level`:
+
+| Level | Label | XP Range |
+|---|---|---|
+| 1 | City Explorer | 0–100 |
+| 2 | Merdeka Wanderer | 101–300 |
+| 3 | Klang Valley Master | 301+ |
+
+The function is used server-side (`calculateLevel`) for updates and client-side (`getLevelInfo`) for UI rendering. Both pages (passport, explore) now consume the same `totalXp` from the API, ensuring consistent level display.
+
+### Streak Algorithm
+
+Runs inside the `POST /api/visits/checkin` transaction:
+
+```
+Compare today (midnight) vs last_visit_date (midnight):
+  same day  → streak unchanged (prevent double-count)
+  next day  → current_streak + 1
+  gap > 1d  → reset to 1
+  null      → set to 1 (first check-in)
+```
+
+### Idempotency & Duplicate Prevention
+
+| Endpoint | Check | Behavior |
+|---|---|---|
+| `POST /api/visits/checkin` | `visit.findFirst({ verificationType: 'geofence' })` | Returns `{ alreadyCheckedIn: true }` — no write |
+| `POST /api/visits/verify-photo` | `visit.findFirst({ verificationType: 'photo' })` | Returns `{ alreadyVerified: true }` — saves Gemini cost |
+| `POST /api/quiz/submit` | `userQuizAttempt.upsert({ where: { userId_quizId } })` | Re-attempts overwrite previous record, XP awarded again (intentional) |
+
+### State-Cache Invalidation
+
+The `GET /api/passport` route acts as a **read-repair layer**: it reads `total_xp` from the profile, recomputes the expected level via `calculateLevel()`, and writes it back if the DB's `current_level` is stale. This ensures the `profiles` table is always consistent even if an earlier mutation failed to update the level.
 
 ### Prisma Import
 

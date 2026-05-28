@@ -27,6 +27,9 @@ export default function PassportPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [totalXp, setTotalXp] = useState(0);
+  const [currentLevel, setCurrentLevel] = useState(1);
+  const [currentStreak, setCurrentStreak] = useState(0);
   const [visitCount, setVisitCount] = useState(0);
   const [reviewCount, setReviewCount] = useState(0);
   const [badgeCount, setBadgeCount] = useState(0);
@@ -55,6 +58,9 @@ export default function PassportPage() {
       }
 
       const data = await res.json();
+      setTotalXp(data.totalXp ?? 0);
+      setCurrentLevel(data.currentLevel ?? 1);
+      setCurrentStreak(data.currentStreak ?? 0);
       setVisitCount(data.visitCount);
       setReviewCount(data.reviewCount);
       setBadgeCount(data.badgeCount);
@@ -66,17 +72,17 @@ export default function PassportPage() {
     fetchPassportData();
   }, [userId]);
 
-  const questPoints = useMemo(() => visitCount * 8 + badgeCount * 25 + reviewCount * 4, [visitCount, reviewCount, badgeCount]);
-  const streakDays = Math.min(7, recentVisits.length);
   const rankLabel = useMemo(() => {
-    if (questPoints >= 200) return 'Transit Legend';
-    if (questPoints >= 120) return 'Merdeka Wanderer';
-    return 'City Explorer';
-  }, [questPoints]);
+    switch (currentLevel) {
+      case 3: return 'Klang Valley Master';
+      case 2: return 'Merdeka Wanderer';
+      default: return 'City Explorer';
+    }
+  }, [currentLevel]);
 
   const animatedVisitCount = useCountUp(visitCount);
-  const animatedQuestPoints = useCountUp(questPoints);
-  const animatedStreakDays = useCountUp(streakDays);
+  const animatedTotalXp = useCountUp(totalXp);
+  const animatedStreakDays = useCountUp(currentStreak);
   const animatedBadgeCount = useCountUp(badgeCount);
 
   const handleLogout = async () => {
@@ -84,6 +90,9 @@ export default function PassportPage() {
       await signOut({
         fetchOptions: {
           onSuccess: () => {
+            setTotalXp(0);
+            setCurrentLevel(1);
+            setCurrentStreak(0);
             setVisitCount(0);
             setReviewCount(0);
             setBadgeCount(0);
@@ -128,7 +137,7 @@ export default function PassportPage() {
 
         {isAuthenticated ? (
           <>
-            <LevelProgress xp={questPoints} />
+            <LevelProgress xp={totalXp} />
 
             <section className="flex gap-3">
               <StatCard label="Stops Visited" value={String(animatedVisitCount)} icon={MapPin} />

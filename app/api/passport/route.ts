@@ -1,5 +1,6 @@
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
+import { calculateLevel } from '@/utils/gamification';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -13,7 +14,12 @@ export async function GET(request: NextRequest) {
   const userId = session.user.id;
 
   try {
-    const [visits, reviews, badges, recentVisits] = await Promise.all([
+    const [profile, visits, reviews, badges, recentVisits] = await Promise.all([
+      // Fetch live profile state
+      prisma.profile.findUnique({
+        where: { id: userId },
+        select: { total_xp: true, current_level: true, current_streak: true, last_visit_date: true },
+      }),
       // Count user's visits (filtered by userId)
       prisma.visit.count({ where: { userId } }),
       // Count user's reviews (filtered by userId)
@@ -40,6 +46,19 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
+    // Validate and sync level if DB is stale
+    let currentLevel = profile?.current_level ?? 1;
+    const totalXp = profile?.total_xp ?? 0;
+    const expectedLevel = calculateLevel(totalXp);
+
+    if (expectedLevel !== currentLevel) {
+      await prisma.profile.update({
+        where: { id: userId },
+        data: { current_level: { set: expectedLevel } },
+      });
+      currentLevel = expectedLevel;
+    }
+
     // Fetch recently earned badges
     const earnedBadges = await prisma.userBadge.findMany({
       where: { userId },  // ← userId filter
@@ -57,6 +76,10 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
+      totalXp,
+      currentLevel,
+      currentStreak: profile?.current_streak ?? 0,
+      lastVisitDate: profile?.last_visit_date ?? null,
       visitCount: visits,
       reviewCount: reviews,
       badgeCount: badges,

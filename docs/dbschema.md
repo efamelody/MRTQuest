@@ -4,6 +4,10 @@ erDiagram
     uuid id PK
     text username
     text avatar_url
+    int total_xp "gamification: cumulative XP"
+    int current_level "gamification: computed from total_xp via bracket"
+    int current_streak "gamification: consecutive calendar-day visits"
+    timestamp last_visit_date "gamification: last check-in timestamp"
     timestamp created_at
   }
 

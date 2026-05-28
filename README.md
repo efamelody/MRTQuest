@@ -13,7 +13,7 @@ A mobile-first gamified exploration application for Kuala Lumpur's MRT infrastru
 | **Authentication** | OAuth via Google and email-password credentials with persistent session management |
 | **Station Explorer** | Browseable catalog of MRT stations organized by line with full attraction inventory per station |
 | **Check-in System** | Progressive verification through geofence proximity detection, AI-powered landmark photo verification, and location-based trivia challenges |
-| **Gamification** | Comprehensive badge system with eight criteria types including visit counts, station coverage, line mastery, and time-based achievements |
+| **Gamification** | XP accumulation per action (geofence check-in, photo verification, quiz answers), level progression (3-tier bracket), consecutive-day streak tracking, and a comprehensive badge system with eight criteria types |
 | **User Profile** | Passport dashboard displaying cumulative quest points, earned badges, recent visits, and user progression rankings |
 | **Suggestions** | User-submitted attraction proposals for operator review and catalog expansion |
 
@@ -45,7 +45,7 @@ Core application tables (managed via Prisma ORM):
 |---|---|---|
 | `Station` | MRT station metadata | `name`, `line`, `latitude`, `longitude`, `sequenceOrder`, `active` |
 | `Attraction` | Points of interest linked to stations | `stationId`, `name`, `description`, `latitude`, `longitude`, `verificationType`, `checkInRadius` |
-| `Profile` | User profile extension | `username`, `avatarUrl` |
+| `Profile` | User profile extension with gamification state | `username`, `avatarUrl`, `totalXp`, `currentLevel`, `currentStreak`, `lastVisitDate` |
 | `Visit` | Check-in event log | `userId`, `siteId`, `visitedAt`, `verificationType` |
 | `Quiz` | Trivia questions per attraction | `siteId`, `question`, `correctAnswer`, `points`, `options` |
 | `UserQuizAttempt` | Quiz submission records | `userId`, `quizId`, `isCorrect`, `pointsEarned` |
@@ -73,6 +73,7 @@ app/                            # Next.js App Router pages and API routes
   api/
     auth/[...auth]/             # Better Auth handler
     badges/                     # GET badge definitions and user progress
+    passport/                   # GET aggregated passport data (XP, level, streak, visits, badges)
     quiz/submit/                # POST quiz submission and grading
     stations/                   # GET stations and attractions
     visits/
@@ -82,7 +83,8 @@ app/                            # Next.js App Router pages and API routes
   badge/page.tsx                # Badge catalog with filtering
   explore/page.tsx              # Station browser with line selection
   login/page.tsx                # Authentication entry point
-  passport/page.tsx             # User dashboard and stats
+    passport/page.tsx             # User dashboard and stats
+    (explore)/page.tsx            # Explore page with station map, level, and missions
   station/[stationId]/page.tsx  # Station detail with attractions
   quiz/[attractionId]/page.tsx  # Quiz interface
   signup/page.tsx               # User registration
@@ -95,6 +97,8 @@ src/
     BadgeToast.tsx              # Achievement notification
     Button.tsx                  # Reusable button component
     Header.tsx                  # Sticky header navigation
+    LevelProgress.tsx           # Level + XP progress bar (3-tier server-aligned bracket)
+    MissionBoard.tsx            # Active missions display for explore page
     Modal.tsx                   # Reusable modal wrapper
     MRTMap.tsx                  # Interactive line visualization
     MrtSignupCard.tsx           # Registration form component
@@ -113,6 +117,7 @@ src/
     auth.ts                     # Better Auth server configuration
     auth-client.ts              # Client-side session hook
     badges.ts                   # Badge evaluation logic and criteria
+    gamification.ts             # Level bracket calculation (calculateLevel, getLevelInfo)
     prisma.ts                   # Prisma client instance
     useAttractionVerification.ts # Distance calculation hook
     supabase/
@@ -207,6 +212,7 @@ Access the application at [http://localhost:3000](http://localhost:3000).
 | `pnpm prisma generate` | Generate Prisma client |
 | `pnpm prisma migrate dev` | Create and apply database migration |
 | `pnpm prisma studio` | Open Prisma Studio web interface |
+| `docs/gamification-flow-test.md` | Step-by-step test plan for full gamification flow |
 
 ---
 
@@ -241,6 +247,37 @@ Authentication flow enforces redirects (authenticated users directed to `/passpo
 - No database-level row-level security; application layer enforces access control
 - Service role keys used only for administrative aggregations (badge counts, stats)
 
+### Gamification Engine
+
+The backend maintains a **state-cache progression system** on the `profiles` table (`total_xp`, `current_level`, `current_streak`, `last_visit_date`). Every successful action atomically updates this cache inside Prisma transactions.
+
+**XP Awards:**
+
+| Action | XP | Implementation |
+|---|---|---|
+| Geofence check-in | 5 | `total_xp: { increment: 5 }` inside `$transaction` |
+| Photo verification | 8 | `total_xp: { increment: 8 }` inside `$transaction` |
+| Correct quiz answer | 2 per answer | `total_xp: { increment: totalCorrect * 2 }` inside `$transaction` |
+
+**Level Bracket (hardcoded in `src/utils/gamification.ts`):**
+
+| Level | Title | XP Range |
+|---|---|---|
+| 1 | City Explorer | 0–100 |
+| 2 | Merdeka Wanderer | 101–300 |
+| 3 | Klang Valley Master | 301+ |
+
+Level is recalculated every time XP changes and synced to `current_level` in the profile.
+
+**Streak Algorithm (runs inside check-in transaction):**
+- Compare today's date (midnight-normalized) against `last_visit_date`
+- Same day → streak unchanged
+- Next calendar day → increment by 1
+- Gap > 1 day → reset to 1
+- First check-in → set to 1
+
+**Badge Evaluation**: Triggered automatically after each action to evaluate all badge criteria against user's activity history (`src/utils/badges.ts`).
+
 ### Check-in Verification System
 
 Three-phase progressive verification workflow:
@@ -249,23 +286,25 @@ Three-phase progressive verification workflow:
 - User location calculated via browser Geolocation API
 - Distance computed using haversine formula (geolib library)
 - Check-in enabled when user is within 300m radius
-- Visit record created with `verificationType: 'geofence'`
+- Duplicate check: existing `{ userId, siteId, verificationType: 'geofence' }` returns `{ alreadyCheckedIn: true }`
+- Visit record created with `verificationType: 'geofence'` inside atomic `$transaction`
+- Profile updated: `total_xp += 5`, streak recalculated, `current_level` synced, `last_visit_date` set
 
 **Phase 2: Landmark Photo Verification (Optional)**
 - User captures photo via webcam
+- Duplicate check: existing photo visit for this attraction returns `{ alreadyVerified: true }` (saves Gemini cost)
 - Image sent to Google Gemini AI for landmark recognition
 - Verification confirms user proximity at photo capture time
-- Confidence threshold (default 70%) determines success
-- Additional Visit record created with `verificationType: 'photo'`
-- Awards bonus points on successful verification
+- Confidence threshold (default 70%) determines success; 60–70% range appends hints
+- Visit record created with `verificationType: 'photo'` inside atomic `$transaction`
+- Profile updated: `total_xp += 8`, `current_level` synced
 
 **Phase 3: Trivia Quiz Challenge (Optional)**
 - Multi-choice questions presented after check-in
 - User attempts quiz questions specific to the attraction
-- Submissions recorded in UserQuizAttempt with correctness validation
-- Points awarded based on answer accuracy
-
-**Badge Evaluation**: Triggered automatically after each phase completion to evaluate all badge criteria against user's activity history.
+- Submissions upserted in `UserQuizAttempt` via `@@unique([userId, quizId])`
+- All upserts + profile update wrapped in a single `$transaction`
+- Profile updated: `total_xp += totalCorrect * 2`, `current_level` synced
 
 ### Badge System
 
@@ -300,11 +339,12 @@ Badge evaluation maintains deduplication (counts unique attractions only) and us
 
 All API routes follow consistent patterns:
 
-1. Extract authenticated user from session
-2. Validate request parameters
-3. Execute database operations via Prisma
-4. Evaluate badges post-action (for mutations)
-5. Return structured JSON response
+1. Extract authenticated user from session (`auth.api.getSession`)
+2. Validate request parameters (type checks, required fields)
+3. Execute database operations via Prisma inside atomic `$transaction` (profile upsert + data mutation + profile update)
+4. For mutating endpoints: award XP via `total_xp: { increment }`, recalculate level via `calculateLevel()`, update `current_level`
+5. Evaluate badges post-action via `evaluateBadges(userId)`
+6. Return structured JSON response
 
 ---
 
@@ -325,3 +365,4 @@ Additional technical documentation available in the `docs/` directory:
 - [Authentication Flow](docs/auth-flow.md) - Better Auth integration details
 - [Database Schema](docs/dbschema.md) - Full data model reference
 - [Architecture Overview](docs/architecture.md) - System design and patterns
+- [Gamification Flow Test](docs/gamification-flow-test.md) - End-to-end test plan for XP, level, and streak
