@@ -1,4 +1,5 @@
-import { prisma } from '@/utils/prisma';
+import { prisma as defaultPrisma } from '@/utils/prisma';
+import type { Prisma } from '@prisma/client';
 
 export type EarnedBadge = {
   id: string;
@@ -7,7 +8,12 @@ export type EarnedBadge = {
   description: string | null;
 };
 
-export async function evaluateBadges(userId: string): Promise<EarnedBadge[]> {
+export async function evaluateBadges(
+  userId: string,
+  tx?: Prisma.TransactionClient
+): Promise<EarnedBadge[]> {
+  const prisma = tx ?? defaultPrisma;
+
   const [allBadges, earnedUserBadges, geofenceVisits, correctQuizCount, reviewCount] =
     await Promise.all([
       prisma.badge.findMany({

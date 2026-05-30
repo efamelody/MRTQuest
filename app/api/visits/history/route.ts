@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
       where: { userId },  // ← userId filter
       select: {
         id: true,
+        siteId: true,
         visitedAt: true,
         verificationType: true,
         attraction: {
@@ -36,21 +37,23 @@ export async function GET(request: NextRequest) {
       take: 100,
     });
 
-    // Deduplicate by siteId — one entry per attraction, photo verification wins
+    // Deduplicate by siteId (the attraction's unique id) — one entry per attraction, photo verification wins
     const seen = new Map<string, { name: string; stationName: string; line: string; visitedAt: string; isPhotoVerified: boolean }>();
 
     for (const visit of visits) {
-      const siteId = visit.attraction?.station?.name;
-      if (!siteId) continue;
+      const key = visit.siteId;
+
+      if (!key) continue;
+      if (!visit.attraction) continue;
 
       const isPhoto = visit.verificationType === 'photo';
-      const existing = seen.get(siteId);
+      const existing = seen.get(key);
 
       if (!existing) {
-        seen.set(siteId, {
-          name: visit.attraction?.name ?? 'Unknown attraction',
-          stationName: visit.attraction?.station?.name ?? 'Unknown station',
-          line: visit.attraction?.station?.line ?? '',
+        seen.set(key, {
+          name: visit.attraction.name,
+          stationName: visit.attraction.station?.name ?? 'Unknown station',
+          line: visit.attraction.station?.line ?? '',
           visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
             day: '2-digit',
             month: 'short',
@@ -60,12 +63,12 @@ export async function GET(request: NextRequest) {
         });
       } else if (isPhoto && !existing.isPhotoVerified) {
         // Upgrade verification level if we find a photo visit for same site
-        seen.set(siteId, { ...existing, isPhotoVerified: true });
+        seen.set(key, { ...existing, isPhotoVerified: true });
       }
     }
 
-    const visitHistory = Array.from(seen.entries()).map(([siteId, v]) => ({
-      siteId,
+    const visitHistory = Array.from(seen.entries()).map(([attractionId, v]) => ({
+      siteId: attractionId,
       ...v,
     }));
 

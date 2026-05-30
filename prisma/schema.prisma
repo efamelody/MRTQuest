@@ -184,6 +184,7 @@ model Visit {
   attraction       Attraction @relation(fields: [siteId], references: [id], onDelete: Cascade)
   user             Profile    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, siteId, verificationType])
   @@index([userId])
   @@index([siteId])
   @@map("visits")

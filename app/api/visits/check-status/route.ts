@@ -1,18 +1,19 @@
+import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session?.user?.id) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const { attractionId } = await request.json();
 
     if (!attractionId) {
-      return Response.json({ error: 'Missing attractionId' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing attractionId' }, { status: 400 });
     }
 
     // Check geofence and photo visits separately
@@ -27,13 +28,13 @@ export async function POST(request: Request) {
       }),
     ]);
 
-    return Response.json({
+    return NextResponse.json({
       isCheckedIn: !!geofenceVisit,
       isPhotoVerified: !!photoVisit,
     });
   } catch (error) {
     console.error('[check-status] Error:', error);
-    return Response.json(
+    return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );

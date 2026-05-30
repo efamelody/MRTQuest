@@ -4,6 +4,11 @@ import { evaluateBadges } from '@/utils/badges';
 import { calculateLevel } from '@/utils/gamification';
 import { NextRequest, NextResponse } from 'next/server';
 
+function toMalaysiaDay(date: Date): number {
+  const ms = date.getTime() + 8 * 60 * 60 * 1000;
+  return Math.floor(ms / (24 * 60 * 60 * 1000));
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: request.headers });
@@ -35,18 +40,17 @@ export async function POST(request: NextRequest) {
         where: { id: userId },
         update: {},
         create: { id: userId },
-        select: { total_xp: true, current_streak: true, last_visit_date: true },
+        select: { current_streak: true, last_visit_date: true },
       });
 
       const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const todayDay = toMalaysiaDay(now);
       const XP_EARNED = 5;
 
       let newStreak: number;
       if (profile.last_visit_date) {
-        const lastVisit = new Date(profile.last_visit_date);
-        const lastVisitDay = new Date(lastVisit.getFullYear(), lastVisit.getMonth(), lastVisit.getDate());
-        const diffDays = Math.round((today.getTime() - lastVisitDay.getTime()) / (1000 * 60 * 60 * 24));
+        const lastVisitDay = toMalaysiaDay(profile.last_visit_date);
+        const diffDays = todayDay - lastVisitDay;
 
         if (diffDays === 0) {
           newStreak = profile.current_streak;
@@ -59,9 +63,6 @@ export async function POST(request: NextRequest) {
         newStreak = 1;
       }
 
-      const newTotalXp = profile.total_xp + XP_EARNED;
-      const newLevel = calculateLevel(newTotalXp);
-
       const visit = await tx.visit.create({
         data: {
           userId,
@@ -72,21 +73,32 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
 
-      await tx.profile.update({
+      // Atomic increment for XP — safe against concurrent requests
+      const updatedProfile = await tx.profile.update({
         where: { id: userId },
         data: {
           total_xp: { increment: XP_EARNED },
-          current_level: { set: newLevel },
           current_streak: { set: newStreak },
           last_visit_date: { set: now },
         },
+        select: { total_xp: true },
       });
 
-      return { visit, newStreak, newTotalXp, newLevel };
+      // Compute level from the actual (post-increment) XP value
+      const newLevel = calculateLevel(updatedProfile.total_xp);
+
+      await tx.profile.update({
+        where: { id: userId },
+        data: { current_level: { set: newLevel } },
+      });
+
+      // Evaluate badges inside the transaction — atomic with visit creation
+      const newBadges = await evaluateBadges(userId, tx);
+
+      return { visit, newStreak, newBadges };
     });
 
-    const newBadges = await evaluateBadges(userId);
-    return NextResponse.json({ visitId: result.visit.id, alreadyCheckedIn: false, newBadges });
+    return NextResponse.json({ visitId: result.visit.id, alreadyCheckedIn: false, newBadges: result.newBadges });
   } catch (error) {
     console.error('[checkin] Error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

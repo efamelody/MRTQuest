@@ -60,10 +60,7 @@ export async function POST(request: NextRequest) {
         correctAnswer: true,
         points: true,
       },
-      orderBy: {
-        // Note: sortOrder field requires running `pnpm prisma generate` after schema update
-        // For now, relying on database sort_order index
-      } as any,
+      orderBy: { sortOrder: 'asc' },
     });
 
     if (quizzes.length === 0) {
@@ -87,10 +84,8 @@ export async function POST(request: NextRequest) {
           return;
         }
 
-        // Note: options validation requires running `pnpm prisma generate` first
-        // For now, doing exact string comparison (case-sensitive)
-        // since options come from the same source as correctAnswer
-        const isCorrect = userAnswer === quiz.correctAnswer;
+        // Case-insensitive comparison to tolerate minor input differences
+        const isCorrect = userAnswer.trim().toLowerCase() === quiz.correctAnswer.trim().toLowerCase();
         const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
 
         if (isCorrect) {
@@ -128,30 +123,38 @@ export async function POST(request: NextRequest) {
 
       await Promise.all(attemptPromises);
 
-      // Ensure profile exists and update XP
-      const profile = await tx.profile.upsert({
+      // Ensure profile exists and update XP with atomic increment
+      await tx.profile.upsert({
         where: { id: userId },
         update: {},
         create: { id: userId },
-        select: { total_xp: true },
+        select: { id: true },
       });
 
       const xpAward = totalCorrect * 2;
-      const newTotalXp = profile.total_xp + xpAward;
-      const newLevel = calculateLevel(newTotalXp);
 
-      await tx.profile.update({
+      // Atomic increment for XP — safe against concurrent requests
+      const updatedProfile = await tx.profile.update({
         where: { id: userId },
         data: {
           total_xp: { increment: xpAward },
-          current_level: { set: newLevel },
         },
+        select: { total_xp: true },
       });
 
-      return { results, totalCorrect, totalPoints };
-    });
+      // Compute level from the actual (post-increment) XP value
+      const newLevel = calculateLevel(updatedProfile.total_xp);
 
-    const newBadges = await evaluateBadges(userId);
+      await tx.profile.update({
+        where: { id: userId },
+        data: { current_level: { set: newLevel } },
+      });
+
+      // Evaluate badges inside the transaction — atomic with quiz submission
+      const newBadges = await evaluateBadges(userId, tx);
+
+      return { results, totalCorrect, totalPoints, newBadges };
+    });
 
     return NextResponse.json(
       {
@@ -160,7 +163,7 @@ export async function POST(request: NextRequest) {
         correctCount: result.totalCorrect,
         totalPoints: result.totalPoints,
         results: result.results,
-        newBadges,
+        newBadges: result.newBadges,
       },
       { status: 200 }
     );

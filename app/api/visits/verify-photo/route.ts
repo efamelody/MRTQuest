@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { calculateLevel } from '@/utils/gamification';
+import { evaluateBadges } from '@/utils/badges';
 import { getDistance } from 'geolib';
 import { GoogleGenAI } from '@google/genai';
 
@@ -200,11 +201,11 @@ export async function POST(request: NextRequest) {
     // Transaction: create visit + update profile atomically
     const XP_EARNED = 8;
     const result = await prisma.$transaction(async (tx) => {
-      const profile = await tx.profile.upsert({
+      await tx.profile.upsert({
         where: { id: userId },
         update: {},
         create: { id: userId },
-        select: { total_xp: true },
+        select: { id: true },
       });
 
       const visit = await tx.visit.create({
@@ -217,18 +218,27 @@ export async function POST(request: NextRequest) {
         select: { id: true },
       });
 
-      const newTotalXp = profile.total_xp + XP_EARNED;
-      const newLevel = calculateLevel(newTotalXp);
-
-      await tx.profile.update({
+      // Atomic increment for XP — safe against concurrent requests
+      const updatedProfile = await tx.profile.update({
         where: { id: userId },
         data: {
           total_xp: { increment: XP_EARNED },
-          current_level: { set: newLevel },
         },
+        select: { total_xp: true },
       });
 
-      return { visit };
+      // Compute level from the actual (post-increment) XP value
+      const newLevel = calculateLevel(updatedProfile.total_xp);
+
+      await tx.profile.update({
+        where: { id: userId },
+        data: { current_level: { set: newLevel } },
+      });
+
+      // Evaluate badges inside the transaction — atomic with visit creation
+      const newBadges = await evaluateBadges(userId, tx);
+
+      return { visit, newBadges };
     });
 
     return NextResponse.json(
@@ -240,6 +250,7 @@ export async function POST(request: NextRequest) {
         confidence: geminiResult.confidence,
         reason: geminiResult.reason,
         nearThreshold: false,
+        newBadges: result.newBadges,
         metadataWarning,
         captureSource: captureSource || 'upload',
       },
@@ -265,7 +276,11 @@ async function verifyLandmarkWithGemini(
   const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
   if (!apiKey) {
-    throw new Error('GOOGLE_GENERATIVE_AI_API_KEY environment variable is not set');
+    return {
+      verified: false,
+      confidence: 0,
+      reason: 'AI verification service not configured',
+    };
   }
 
   const ai = new GoogleGenAI({ apiKey });
