@@ -20,17 +20,22 @@ export async function GET(request: NextRequest) {
         where: { id: userId },
         select: { total_xp: true, current_level: true, current_streak: true, last_visit_date: true },
       }),
-      // Count user's visits (filtered by userId)
-      prisma.visit.count({ where: { userId } }),
+      // Count distinct attractions with geofence check-in (deduplicates geofence+photo pairs)
+      prisma.visit.groupBy({
+        by: ['siteId'],
+        where: { userId, verificationType: 'geofence' },
+        _count: { siteId: true },
+      }).then((groups) => groups.length),
       // Count user's reviews (filtered by userId)
       prisma.review.count({ where: { userId } }),
       // Count user's earned badges (filtered by userId)
       prisma.userBadge.count({ where: { userId } }),
-      // Get 3 most recent visits with attraction & station line (filtered by userId)
+      // Get recent visits (all types), deduplicated by siteId (filtered by userId)
       prisma.visit.findMany({
-        where: { userId },  // ← userId filter
+        where: { userId },
         select: {
           id: true,
+          siteId: true,
           visitedAt: true,
           attraction: {
             select: {
@@ -42,7 +47,7 @@ export async function GET(request: NextRequest) {
           },
         },
         orderBy: { visitedAt: 'desc' },
-        take: 3,
+        take: 10,
       }),
     ]);
 
@@ -83,16 +88,26 @@ export async function GET(request: NextRequest) {
       visitCount: visits,
       reviewCount: reviews,
       badgeCount: badges,
-      recentVisits: recentVisits.map((visit: { id: string; visitedAt: Date; attraction: { name: string; station: { line: string } | null } | null }) => ({
-        id: visit.id,
-        name: visit.attraction?.name ?? 'Unknown location',
-        line: visit.attraction?.station?.line ?? null,
-        visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        }),
-      })),
+      recentVisits: (() => {
+        const seen = new Set<string>();
+        return recentVisits
+          .filter((v: { siteId: string }) => {
+            if (seen.has(v.siteId)) return false;
+            seen.add(v.siteId);
+            return true;
+          })
+          .slice(0, 3)
+          .map((visit: { id: string; visitedAt: Date; attraction: { name: string; station: { line: string } | null } | null }) => ({
+            id: visit.id,
+            name: visit.attraction?.name ?? 'Unknown location',
+            line: visit.attraction?.station?.line ?? null,
+            visitedAt: new Date(visit.visitedAt).toLocaleDateString('en-GB', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            }),
+          }));
+      })(),
       earnedBadges: earnedBadges.map((ub: { badgeId: string; badge: { id: string; name: string; icon: string | null } | null }) => ({
         id: ub.badgeId,
         name: ub.badge?.name ?? 'Badge',
