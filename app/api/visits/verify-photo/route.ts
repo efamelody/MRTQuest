@@ -3,6 +3,7 @@ import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { calculateLevel } from '@/utils/gamification';
 import { evaluateBadges } from '@/utils/badges';
+import { logAuditEvent } from '@/utils/audit';
 import { getDistance } from 'geolib';
 import { GoogleGenAI } from '@google/genai';
 
@@ -33,10 +34,7 @@ export async function POST(request: NextRequest) {
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please log in to verify a check-in.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -81,12 +79,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existingPhoto) {
-      return NextResponse.json({
-        success: true,
-        visitId: existingPhoto.id,
-        alreadyVerified: true,
-        message: 'Photo already verified for this location.',
-      });
+      return NextResponse.json(
+        { error: 'Photo already verified for this location.', visitId: existingPhoto.id, alreadyCheckedIn: true },
+        { status: 409 }
+      );
     }
 
     if (!base64Image || typeof base64Image !== 'string') {
@@ -241,6 +237,7 @@ export async function POST(request: NextRequest) {
       return { visit, newBadges };
     });
 
+    logAuditEvent(userId, 'checkin.photo', { attractionId, visitId: result.visit.id });
     return NextResponse.json(
       {
         success: true,
@@ -329,18 +326,11 @@ async function verifyLandmarkWithGemini(
       },
     });
 
-    // FIX: Check if text exists before using it
-    const responseText = result.text;
-
-    if (!responseText) {
+    if (!result.text) {
       throw new Error('Gemini returned an empty response');
     }
 
-    // Now TypeScript knows responseText is a string
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error('No JSON found in response');
-
-    const parsedResponse: GeminiResponse = JSON.parse(jsonMatch[0]);
+    const parsedResponse: GeminiResponse = JSON.parse(result.text);
 
     if (typeof parsedResponse.verified !== 'boolean' || typeof parsedResponse.confidence !== 'number') {
       throw new Error('Invalid response structure');

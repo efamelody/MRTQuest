@@ -221,3 +221,16 @@ model UserQuizAttempt {
   @@index([quizId])
   @@map("user_quiz_attempts")
 }
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  event      String
+  metadata   Json?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([event])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

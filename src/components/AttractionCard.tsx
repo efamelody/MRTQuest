@@ -80,7 +80,7 @@ export default function AttractionCard({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attractionId: id }),
     });
-    if (res.ok) {
+    if (res.ok || res.status === 409) {
       const data = await res.json() as { visitId: string; alreadyCheckedIn: boolean; newBadges?: EarnedBadge[] };
       setIsCheckedIn(true);
       setShowConfetti(true);

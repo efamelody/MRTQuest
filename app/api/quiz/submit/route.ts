@@ -3,6 +3,7 @@ import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { evaluateBadges } from '@/utils/badges';
 import { calculateLevel } from '@/utils/gamification';
+import { logAuditEvent } from '@/utils/audit';
 
 interface SubmitQuizRequest {
   attractionId: string;
@@ -24,10 +25,7 @@ export async function POST(request: NextRequest) {
     const session = await auth.api.getSession({ headers: request.headers });
 
     if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized. Please log in to submit a quiz.' },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const userId = session.user.id;
@@ -72,56 +70,51 @@ export async function POST(request: NextRequest) {
 
     // Process answers and create records within a transaction
     const result = await prisma.$transaction(async (tx) => {
-      const results: QuizResult[] = [];
-      let totalCorrect = 0;
-      let totalPoints = 0;
+      const quizResults = await Promise.all(
+        quizzes.map(async (quiz: { id: string; question: string; correctAnswer: string; points: number | null }) => {
+          const userAnswer = answers[quiz.id];
 
-      const attemptPromises = quizzes.map(async (quiz: { id: string; question: string; correctAnswer: string; points: number | null }) => {
-        const userAnswer = answers[quiz.id];
+          // If user didn't answer this question, skip it
+          if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
+            return null;
+          }
 
-        // If user didn't answer this question, skip it
-        if (userAnswer === undefined || userAnswer === null || userAnswer.trim?.() === '') {
-          return;
-        }
+          // Case-insensitive comparison to tolerate minor input differences
+          const isCorrect = userAnswer.trim().toLowerCase() === quiz.correctAnswer.trim().toLowerCase();
+          const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
 
-        // Case-insensitive comparison to tolerate minor input differences
-        const isCorrect = userAnswer.trim().toLowerCase() === quiz.correctAnswer.trim().toLowerCase();
-        const pointsEarned = isCorrect ? (quiz.points || 50) : 0;
+          // Upsert so re-attempts overwrite the previous record
+          await tx.userQuizAttempt.upsert({
+            where: { userId_quizId: { userId, quizId: quiz.id } },
+            update: {
+              isCorrect,
+              answer_provided: userAnswer,
+              points_earned: pointsEarned,
+              attemptedAt: new Date(),
+            },
+            create: {
+              userId,
+              quizId: quiz.id,
+              isCorrect,
+              answer_provided: userAnswer,
+              points_earned: pointsEarned,
+            },
+          });
 
-        if (isCorrect) {
-          totalCorrect++;
-          totalPoints += pointsEarned;
-        }
-
-        // Upsert so re-attempts overwrite the previous record
-        await tx.userQuizAttempt.upsert({
-          where: { userId_quizId: { userId, quizId: quiz.id } },
-          update: {
-            isCorrect,
-            answer_provided: userAnswer,
-            points_earned: pointsEarned,
-            attemptedAt: new Date(),
-          },
-          create: {
-            userId,
+          return {
             quizId: quiz.id,
+            question: quiz.question,
+            correctAnswer: quiz.correctAnswer,
+            userAnswer,
             isCorrect,
-            answer_provided: userAnswer,
-            points_earned: pointsEarned,
-          },
-        });
+            pointsEarned,
+          } satisfies QuizResult;
+        })
+      );
 
-        results.push({
-          quizId: quiz.id,
-          question: quiz.question,
-          correctAnswer: quiz.correctAnswer,
-          userAnswer,
-          isCorrect,
-          pointsEarned,
-        });
-      });
-
-      await Promise.all(attemptPromises);
+      const results = quizResults.filter((r): r is QuizResult => r !== null);
+      const totalCorrect = results.filter((r) => r.isCorrect).length;
+      const totalPoints = results.reduce((sum, r) => sum + r.pointsEarned, 0);
 
       // Ensure profile exists and update XP with atomic increment
       await tx.profile.upsert({
@@ -156,6 +149,7 @@ export async function POST(request: NextRequest) {
       return { results, totalCorrect, totalPoints, newBadges };
     });
 
+    logAuditEvent(userId, 'quiz.submit', { attractionId, correctCount: result.totalCorrect, totalPoints: result.totalPoints });
     return NextResponse.json(
       {
         success: true,

@@ -1,7 +1,8 @@
-import { auth } from '@/utils/auth';
 import { prisma } from '@/utils/prisma';
 import { evaluateBadges } from '@/utils/badges';
 import { calculateLevel } from '@/utils/gamification';
+import { requireAuth } from '@/utils/with-auth';
+import { logAuditEvent } from '@/utils/audit';
 import { NextRequest, NextResponse } from 'next/server';
 
 function toMalaysiaDay(date: Date): number {
@@ -11,13 +12,9 @@ function toMalaysiaDay(date: Date): number {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
-
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const userId = session.user.id;
+    const auth = await requireAuth(request);
+    if (typeof auth !== 'string') return auth;
+    const userId = auth;
     const { attractionId } = await request.json();
 
     if (!attractionId || typeof attractionId !== 'string') {
@@ -31,7 +28,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json({ visitId: existing.id, alreadyCheckedIn: true });
+      return NextResponse.json(
+        { error: 'Already checked in at this location', visitId: existing.id, alreadyCheckedIn: true },
+        { status: 409 }
+      );
     }
 
     // Transaction: profile upsert, visit creation, and profile update atomically
@@ -98,6 +98,7 @@ export async function POST(request: NextRequest) {
       return { visit, newStreak, newBadges };
     });
 
+    logAuditEvent(userId, 'checkin.geofence', { attractionId, visitId: result.visit.id });
     return NextResponse.json({ visitId: result.visit.id, alreadyCheckedIn: false, newBadges: result.newBadges });
   } catch (error) {
     console.error('[checkin] Error:', error);

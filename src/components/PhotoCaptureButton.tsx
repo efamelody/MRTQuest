@@ -181,7 +181,7 @@ export default function PhotoCaptureButton({
           setMetadataWarning(data.metadataWarning);
         }
 
-        if (!response.ok) {
+        if (!response.ok && response.status !== 409) {
           const reasonMessage = data.reason || data.error || 'Photo verification failed. Please try again.';
           const tip = buildProTip(data.reason);
           setProTip(tip);

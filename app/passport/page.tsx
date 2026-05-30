@@ -5,6 +5,7 @@ import { Award, Clock3, LogOut, MapPin, UserCircle2, Loader2 } from 'lucide-reac
 import { useRouter } from 'next/navigation';
 import { useSession, signOut } from '@/utils/auth-client';
 import { useCountUp } from '@/utils/useCountUp';
+import { getLevelTitle } from '@/utils/gamification';
 import { LevelProgress } from '@/components/LevelProgress';
 
 type EarnedBadge = {
@@ -72,13 +73,7 @@ export default function PassportPage() {
     fetchPassportData();
   }, [userId]);
 
-  const rankLabel = useMemo(() => {
-    switch (currentLevel) {
-      case 3: return 'Klang Valley Master';
-      case 2: return 'Merdeka Wanderer';
-      default: return 'City Explorer';
-    }
-  }, [currentLevel]);
+  const rankLabel = useMemo(() => getLevelTitle(currentLevel), [currentLevel]);
 
   const animatedVisitCount = useCountUp(visitCount);
   const animatedTotalXp = useCountUp(totalXp);
