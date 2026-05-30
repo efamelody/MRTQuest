@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Camera, Crown, MapPin, Ticket, Zap } from 'lucide-react';
+import { Award, Crown, MapPin, Ticket, Zap } from 'lucide-react';
 import { BadgeCard } from '@/components/BadgeCard';
 import { useSession } from '@/utils/auth-client';
 
@@ -36,6 +36,16 @@ type VisitSummary = {
   isPhotoVerified: boolean;
 };
 
+type Station = {
+  id: string;
+  name: string;
+  line: string;
+  active: boolean;
+  sequenceOrder: number | null;
+};
+
+type StationWithVisit = Station & { visit: VisitSummary | null };
+
 export default function BadgePage() {
   const [badges, setBadges] = useState<BadgeRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -46,6 +56,8 @@ export default function BadgePage() {
   const [errorVisits, setErrorVisits] = useState<string | null>(null);
   const visitsFetched = useRef(false);
   const { data: session } = useSession();
+  const [stations, setStations] = useState<Station[]>([]);
+  const [isLoadingStations, setIsLoadingStations] = useState(false);
 
   const currentUserId = session?.user?.id ?? '';
   const hasUser = Boolean(currentUserId);
@@ -93,6 +105,23 @@ export default function BadgePage() {
     fetchVisits();
   }, [hasUser]);
 
+  useEffect(() => {
+    const fetchStations = async () => {
+      setIsLoadingStations(true);
+      try {
+        const res = await fetch('/api/stations');
+        if (!res.ok) throw new Error('Failed to load stations');
+        const json = await res.json() as { stations: Station[] };
+        setStations((json.stations ?? []).filter((s) => s.active));
+      } catch {
+        setStations([]);
+      } finally {
+        setIsLoadingStations(false);
+      }
+    };
+    fetchStations();
+  }, []);
+
   const badgeStats = useMemo(() => {
     const earnedBadges = badges.filter((badge) => badge.user_badges?.length);
     return {
@@ -109,6 +138,12 @@ export default function BadgePage() {
       quests: badges.filter((b) => ['time_check', 'multi_line', 'photo_review', 'quiz_master'].includes(b.criteria_type ?? '')),
     };
   }, [badges]);
+
+  const stationCabinet = useMemo(() => {
+    const visitMap = new Map<string, VisitSummary>();
+    visits.forEach((v) => visitMap.set(v.stationName, v));
+    return stations.map((s) => ({ ...s, visit: visitMap.get(s.name) ?? null }));
+  }, [stations, visits]);
 
   const filteredBadgesForTab = useMemo(() => {
     switch (activeTab) {
@@ -206,15 +241,15 @@ export default function BadgePage() {
           </div>
         </div>
 
-        {/* VISITS SECTION */}
+        {/* STATION CABINET */}
         {activeTab === 'visits' && (
           <section className="px-6 mt-6 mb-8">
             <div className="flex items-center gap-2 mb-1">
               <MapPin className="w-5 h-5 text-[#00A959]" />
-              <h2 className="text-lg font-bold text-slate-900">Places Visited</h2>
+              <h2 className="text-lg font-bold text-slate-900">Station Cabinet</h2>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              {!isLoadingVisits && !errorVisits ? `${visits.length} attraction${visits.length !== 1 ? 's' : ''} checked in` : ''}
+              {!isLoadingStations && !isLoadingVisits ? `${stations.length} active station${stations.length !== 1 ? 's' : ''}` : ''}
             </p>
 
             {!hasUser && (
@@ -223,24 +258,24 @@ export default function BadgePage() {
               </div>
             )}
 
-            {hasUser && isLoadingVisits && (
-              <p className="text-sm text-slate-500">Loading visits…</p>
+            {hasUser && (isLoadingStations || isLoadingVisits) && (
+              <p className="text-sm text-slate-500">Loading stations…</p>
             )}
 
-            {hasUser && errorVisits && (
+            {hasUser && !isLoadingStations && !isLoadingVisits && errorVisits && (
               <p className="text-sm text-red-600">{errorVisits}</p>
             )}
 
-            {hasUser && !isLoadingVisits && !errorVisits && visits.length === 0 && (
+            {hasUser && !isLoadingStations && !isLoadingVisits && !errorVisits && stations.length === 0 && (
               <div className="rounded-3xl bg-white/80 p-6 text-center border border-slate-200">
-                <p className="text-slate-600">You haven&apos;t visited anywhere yet. Check in at a station to get started!</p>
+                <p className="text-slate-600">No active stations available yet.</p>
               </div>
             )}
 
-            {hasUser && !isLoadingVisits && !errorVisits && visits.length > 0 && (
-              <div className="flex flex-col gap-3">
-                {visits.map((visit) => (
-                  <VisitCard key={visit.siteId} visit={visit} />
+            {hasUser && !isLoadingStations && !isLoadingVisits && !errorVisits && stations.length > 0 && (
+              <div className="grid grid-cols-3 gap-3">
+                {stationCabinet.map((item) => (
+                  <StationStampCard key={item.id} item={item} />
                 ))}
               </div>
             )}
@@ -371,40 +406,53 @@ export default function BadgePage() {
   );
 }
 
-function VisitCard({ visit }: { visit: VisitSummary }) {
-  const isKajang = visit.line.toLowerCase().includes('kajang');
-  const linePill = isKajang
-    ? { label: 'KJ', bg: 'bg-[#00A959]/10', text: 'text-[#00A959]', border: 'border-[#00A959]/30' }
-    : { label: 'PY', bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' };
-  const leftBorder = isKajang ? 'border-l-[#00A959]' : 'border-l-purple-500';
-  const pinColor = isKajang ? 'text-[#00A959]' : 'text-purple-500';
+function StationStampCard({ item }: { item: StationWithVisit }) {
+  const isKajang = item.line.toLowerCase().includes('kajang');
+  const lineLabel = isKajang ? 'KJ' : 'PY';
+  const lineStyles = isKajang
+    ? { bg: 'bg-emerald-50', text: 'text-emerald-600', border: 'border-emerald-200' }
+    : { bg: 'bg-purple-50', text: 'text-purple-600', border: 'border-purple-200' };
 
   return (
-    <div className={`bg-white/70 backdrop-blur-sm rounded-2xl border border-slate-100 border-l-4 ${leftBorder} px-4 py-3 flex items-start gap-3`}>
-      <MapPin className={`w-5 h-5 mt-0.5 shrink-0 ${pinColor}`} />
-      <div className="flex-1 min-w-0">
-        <p className="font-bold text-slate-900 text-sm leading-snug truncate">{visit.name}</p>
-        <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs text-slate-500">{visit.stationName}</span>
-          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full border ${linePill.bg} ${linePill.text} ${linePill.border}`}>
-            {linePill.label}
-          </span>
+    <div
+      className={`aspect-square rounded-xl border-2 p-2 flex flex-col items-center justify-center relative overflow-hidden transition-all ${
+        item.visit
+          ? 'bg-[#FDF8EE] border-double border-amber-700/30'
+          : 'bg-[#FDF8EE]/50 border-dashed border-slate-300'
+      }`}
+    >
+      {/* Decorative passport corners */}
+      <div className={`absolute top-1 left-1 w-3 h-3 border-t-2 border-l-2 rounded-tl ${item.visit ? 'border-amber-700/30' : 'border-slate-300'}`} />
+      <div className={`absolute top-1 right-1 w-3 h-3 border-t-2 border-r-2 rounded-tr ${item.visit ? 'border-amber-700/30' : 'border-slate-300'}`} />
+      <div className={`absolute bottom-1 left-1 w-3 h-3 border-b-2 border-l-2 rounded-bl ${item.visit ? 'border-amber-700/30' : 'border-slate-300'}`} />
+      <div className={`absolute bottom-1 right-1 w-3 h-3 border-b-2 border-r-2 rounded-br ${item.visit ? 'border-amber-700/30' : 'border-slate-300'}`} />
+
+      <p className={`text-[10px] font-bold text-center leading-tight ${item.visit ? 'text-[#2D3250]' : 'text-slate-400'}`}>
+        {item.name}
+      </p>
+      <span className={`mt-1 text-[7px] font-bold px-1.5 py-0.5 rounded-full border ${
+        item.visit
+          ? `${lineStyles.bg} ${lineStyles.text} ${lineStyles.border}`
+          : 'bg-slate-50 text-slate-300 border-slate-200'
+      }`}>
+        {lineLabel}
+      </span>
+
+      {item.visit ? (
+        <span
+          className="absolute text-[10px] font-extrabold text-red-500/60 uppercase tracking-widest whitespace-nowrap bg-red-50/40 px-2 py-0.5 rounded-sm border border-red-300/40 pointer-events-none"
+          style={{ transform: 'rotate(-15deg)' }}
+        >
+          {item.visit.visitedAt}
+        </span>
+      ) : (
+        <div className="mt-2 flex flex-col items-center gap-0.5">
+          <div className="w-5 h-5 rounded-full border-2 border-dashed border-slate-300 flex items-center justify-center">
+            <span className="text-slate-300 text-[8px]">?</span>
+          </div>
+          <span className="text-[7px] text-slate-300 font-medium">Not yet visited</span>
         </div>
-        <div className="mt-2">
-          {visit.isPhotoVerified ? (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              <Camera className="w-3 h-3" />
-              Photo Verified
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 border border-slate-200">
-              <MapPin className="w-3 h-3" />
-              Geofenced
-            </span>
-          )}
-        </div>
-      </div>
-      <p className="text-xs text-slate-400 shrink-0 mt-0.5">{visit.visitedAt}</p>
+      )}
     </div>
   );
 }
